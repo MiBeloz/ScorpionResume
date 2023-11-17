@@ -64,9 +64,6 @@ void MainWindow::rec_readyReadFile(QStringList strList)
     //qDebug() << strList.size();
     //qDebug() << ui->lw_file->count();
 
-//    setTypeOfProcessing();
-//    setTool();
-
     ui->lb_countOfFrames->setText(QString::number(countOfFrames));
     ui->lb_tool->setText(mTool);
     ui->lb_progress->setText("Готово!");
@@ -130,9 +127,22 @@ void MainWindow::setTypeOfProcessing()
     ui->progressBarLocal->setValue(0);
     ui->lb_progress->setText("Чтение видов обработок...");
 
+    bool findHead = false;
     for (int i = 0; i < ui->lw_file->count(); ++i) {
         getTypeOfProcessing("HSR-", i);
         getTypeOfProcessing("HSM-", i);
+        if (ui->lw_typeOfProcessing->count() > 0 && !findHead) {
+            head = i;
+            size_t n = 0;
+            do {
+                head--;
+                std::string str = ui->lw_file->item(head)->text().toStdString();
+                std::string strFind = 'N' + std::to_string(head) + " ;";
+                n = str.find(strFind);
+            }
+            while (n != std::string::npos);
+            findHead = true;
+        }
 
         ui->progressBarLocal->setValue(i + 1);
     }
@@ -224,4 +234,133 @@ void MainWindow::clearAll()
     ui->spB_stopFrame->setValue(0);
     ui->progressBarAll->setValue(0);
     ui->progressBarLocal->setValue(0);
+}
+
+void MainWindow::on_pb_ok_clicked()
+{
+    int frame = ui->spB_stopFrame->value();
+    int posFrame = 1;
+    double X = 0, Y = 0, Z = 50;
+    double F = 0;
+    int G = 0;
+    if (frame < 1) {
+        return;
+    }
+
+    qDebug() << QString::fromStdString(std::to_string(frame));
+
+    for (int i = 0; i < ui->lw_file->count(); ++i) {
+        std::string str = ui->lw_file->item(i)->text().toStdString();
+        size_t n = str.find('N' + std::to_string(frame));
+
+        if (n != std::string::npos) {
+            posFrame = i;
+            break;
+        }
+    }
+
+    for (int i = posFrame - 1; i > 0; --i) {
+        std::string str = ui->lw_file->item(i)->text().toStdString();
+        auto it = std::find(str.begin(), str.end(), 'X');
+        if (it != str.end()) {
+            str.erase(str.begin(), ++it);
+
+            auto itEnd = str.begin();
+            if (*itEnd == '-') {
+                ++itEnd;
+            }
+            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
+                ++itEnd;
+            }
+            str.erase(itEnd, str.end());
+            X = std::stod(str);
+
+            qDebug() << "X = " + QString::number(X);
+
+            break;
+        }
+    }
+
+    for (int i = posFrame - 1; i > 0; --i) {
+        std::string str = ui->lw_file->item(i)->text().toStdString();
+        auto it = std::find(str.begin(), str.end(), 'Y');
+        if (it != str.end()) {
+            str.erase(str.begin(), ++it);
+
+            auto itEnd = str.begin();
+            if (*itEnd == '-') {
+                ++itEnd;
+            }
+            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
+                ++itEnd;
+            }
+            str.erase(itEnd, str.end());
+            Y = std::stod(str);
+
+            qDebug() << "Y = " + QString::number(Y);
+
+            break;
+        }
+    }
+
+    for (int i = posFrame - 1; i > 0; --i) {
+        std::string str = ui->lw_file->item(i)->text().toStdString();
+        auto it = std::find(str.begin(), str.end(), 'Z');
+        if (it != str.end()) {
+            str.erase(str.begin(), ++it);
+
+            auto itEnd = str.begin();
+            if (*itEnd == '-') {
+                ++itEnd;
+            }
+            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
+                ++itEnd;
+            }
+            str.erase(itEnd, str.end());
+            Z = std::stod(str);
+
+            qDebug() << "Z = " + QString::number(Z);
+
+            break;
+        }
+    }
+
+    for (int i = posFrame - 1; i > 0; --i) {
+        std::string str = ui->lw_file->item(i)->text().toStdString();
+        auto it = std::find(str.begin(), str.end(), 'F');
+        if (it != str.end()) {
+            str.erase(str.begin(), ++it);
+
+            auto itEnd = str.begin();
+            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
+                ++itEnd;
+            }
+            str.erase(itEnd, str.end());
+            F = std::stod(str);
+
+            qDebug() << "F = " + QString::number(F);
+
+            break;
+        }
+    }
+
+    for (int i = posFrame - 1; i > 0; --i) {
+        std::string str = ui->lw_file->item(i)->text().toStdString();
+        auto it = std::find(str.begin(), str.end(), 'G');
+        if (it != str.end()) {
+            str.erase(str.begin(), ++it);
+
+            auto itEnd = str.begin();
+            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
+                ++itEnd;
+            }
+            str.erase(itEnd, str.end());
+            G = std::stoi(str);
+
+            qDebug() << "G = " + QString::number(G);
+            qDebug() << "Head = " + QString::number(head);
+
+            break;
+        }
+    }
 }

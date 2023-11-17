@@ -30,12 +30,15 @@ private slots:
     void on_about_triggered();
     void on_pb_findFile_clicked();
 
+    void on_pb_ok_clicked();
+
 private:
     Ui::MainWindow *ui;
     About *pAboutWindow;
     QString mDir = "G:/";
     QFile mFile;
     QString mTool;
+    int head = 0;
 
     void setEnabledWidgwts(bool enabled);
     void setTypeOfProcessing();
