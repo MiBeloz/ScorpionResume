@@ -23,6 +23,9 @@ set(PROJECT_SOURCES
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
+    outform.cpp
+    outform.h
+    outform.ui
     about.cpp
     about.h
     about.ui

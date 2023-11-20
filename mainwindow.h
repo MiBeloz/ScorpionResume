@@ -3,11 +3,16 @@
 
 #include <QMainWindow>
 #include <QDebug>
+#include <QMap>
 #include <QtConcurrent>
 #include <QFileDialog>
 #include <QString>
 #include <QFile>
+#include <QLabel>
+#include <QProgressBar>
+#include <QListWidget>
 
+#include "outform.h"
 #include "about.h"
 
 QT_BEGIN_NAMESPACE
@@ -34,17 +39,24 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    OutForm *pOutForm;
     About *pAboutWindow;
     QString mDir = "G:/";
     QFile mFile;
     QString mTool;
     int head = 0;
+    QMap<int, QString> typesOfProcessing;
+    QLabel *pLabel;
+    QListWidget *pListWidget;
+    QProgressBar *pProgressBar;
 
     void setEnabledWidgwts(bool enabled);
     void setTypeOfProcessing();
     void getTypeOfProcessing(QString type, int i);
     void setTool();
     void getTool(QString type, int i);
+    int findPosFrame(int frame);
+    double findAxisValue(int posFrame, QChar axis, bool checkIJK);
     void clearAll();
 };
 #endif // MAINWINDOW_H

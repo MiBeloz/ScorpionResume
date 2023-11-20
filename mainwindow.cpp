@@ -6,6 +6,12 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    pLabel = new QLabel(this);
+    pLabel->setVisible(false);
+    pListWidget = new QListWidget(this);
+    pListWidget->setVisible(false);
+    pProgressBar = new QProgressBar(this);
+    pProgressBar->setVisible(false);
 
     ui->progressBarAll->setMinimum(0);
     ui->progressBarAll->setValue(0);
@@ -15,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
     setEnabledWidgwts(false);
 
     pAboutWindow = new About(this);
+    pOutForm = new OutForm(this);
 
     QObject::connect(this, &MainWindow::sig_readyReadFile, this, &MainWindow::rec_readyReadFile);
 }
@@ -166,7 +173,8 @@ void MainWindow::getTypeOfProcessing(QString type, int i)
             auto it = std::find(str.begin(), str.end(), ')');
             if (it != str.end()) {
                 str.erase(it, str.end());
-                ui->lw_typeOfProcessing->addItem(QString::fromStdString(str));
+                ui->lw_typeOfProcessing->addItem('N' + QString::number(i) + "\t\t" + QString::fromStdString(str));
+                typesOfProcessing[i] = QString::fromStdString(str);
             }
         }
     }
@@ -223,12 +231,71 @@ void MainWindow::getTool(QString type, int i)
     }
 }
 
+int MainWindow::findPosFrame(int frame)
+{
+    for (int i = 0; i < ui->lw_file->count(); ++i) {
+        std::string str = ui->lw_file->item(i)->text().toStdString();
+        size_t n = str.find('N' + std::to_string(frame));
+
+        if (n != std::string::npos) {
+            return i;
+        }
+    }
+    return 1;
+}
+
+double MainWindow::findAxisValue(int posFrame, QChar axis, bool checkIJK)
+{
+    for (int i = posFrame; i > 0; --i) {
+        std::string str = ui->lw_file->item(i)->text().toStdString();
+
+        bool strOK = false;
+        if (checkIJK) {
+            auto itK = std::find(str.begin(), str.end(), 'K');
+            if (itK == str.end()) {
+                auto itJ = std::find(str.begin(), str.end(), 'J');
+                if (itJ == str.end()) {
+                    auto itI = std::find(str.begin(), str.end(), 'I');
+                    if (itI == str.end()) {
+                        strOK = true;
+                    }
+                }
+            }
+        }
+        else {
+            strOK = true;
+        }
+
+        if (strOK) {
+            auto it = std::find(str.begin(), str.end(), axis);
+            if (it != str.end()) {
+                str.erase(str.begin(), ++it);
+
+                auto itEnd = str.begin();
+                if (*itEnd == '-') {
+                    ++itEnd;
+                }
+                while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
+                    ++itEnd;
+                }
+                str.erase(itEnd, str.end());
+
+                qDebug() << static_cast<QString>(axis) + " = " + QString::number(std::stod(str));
+                return std::stod(str);
+            }
+        }
+    }
+    return -10000;
+}
+
 void MainWindow::clearAll()
 {
     ui->lw_file->clear();
     ui->lw_typeOfProcessing->clear();
     ui->lb_tool->setText("-");
     mTool = "-";
+    head = 0;
+    typesOfProcessing.clear();
     ui->lb_countOfFrames->setText("-");
     ui->lb_progress->setText("-");
     ui->spB_stopFrame->setValue(0);
@@ -249,118 +316,69 @@ void MainWindow::on_pb_ok_clicked()
 
     qDebug() << QString::fromStdString(std::to_string(frame));
 
-    for (int i = 0; i < ui->lw_file->count(); ++i) {
-        std::string str = ui->lw_file->item(i)->text().toStdString();
-        size_t n = str.find('N' + std::to_string(frame));
+    pProgressBar->setMinimum(0);
+    pProgressBar->setMaximum(6);
+    pProgressBar->setValue(0);
+    pLabel->setMinimumSize(100, 13);
+    ui->statusbar->addWidget(pLabel);
+    ui->statusbar->addWidget(pProgressBar);
+    pLabel->show();
+    pProgressBar->show();
 
-        if (n != std::string::npos) {
-            posFrame = i;
-            break;
-        }
+    posFrame = findPosFrame(frame);
+
+    pLabel->setText("Поиск 'X'...");
+    X = findAxisValue(posFrame, 'X', true);
+    pProgressBar->setValue(1);
+
+    pLabel->setText("Поиск 'Y'...");
+    Y = findAxisValue(posFrame, 'Y', true);
+    pProgressBar->setValue(2);
+
+    pLabel->setText("Поиск 'Z'...");
+    Z = findAxisValue(posFrame, 'Z', false);
+    pProgressBar->setValue(3);
+
+    pLabel->setText("Поиск 'F'...");
+    F = findAxisValue(posFrame, 'F', true);
+    pProgressBar->setValue(4);
+
+    pLabel->setText("Поиск 'G'...");
+    G = findAxisValue(posFrame, 'G', true);
+    pProgressBar->setValue(5);
+
+    qDebug() << "Head = " + QString::number(head);
+
+    pLabel->setText("Генерация УП...");
+    pOutForm->lwOutClear();
+    for (int i = 0; i < head + 1; ++i) {
+        pOutForm->lwOutAddItem(ui->lw_file->item(i)->text());
     }
-
-    for (int i = posFrame - 1; i > 0; --i) {
-        std::string str = ui->lw_file->item(i)->text().toStdString();
-        auto it = std::find(str.begin(), str.end(), 'X');
-        if (it != str.end()) {
-            str.erase(str.begin(), ++it);
-
-            auto itEnd = str.begin();
-            if (*itEnd == '-') {
-                ++itEnd;
+    for (auto it = typesOfProcessing.cend() - 1; it != typesOfProcessing.cbegin() - 1; --it) {
+        if (it.key() < posFrame) {
+            QString str = ";(";
+            for (int j = 0; j < it.value().size(); ++j) {
+                str += "-";
             }
-            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
-                ++itEnd;
-            }
-            str.erase(itEnd, str.end());
-            X = std::stod(str);
-
-            qDebug() << "X = " + QString::number(X);
-
-            break;
-        }
-    }
-
-    for (int i = posFrame - 1; i > 0; --i) {
-        std::string str = ui->lw_file->item(i)->text().toStdString();
-        auto it = std::find(str.begin(), str.end(), 'Y');
-        if (it != str.end()) {
-            str.erase(str.begin(), ++it);
-
-            auto itEnd = str.begin();
-            if (*itEnd == '-') {
-                ++itEnd;
-            }
-            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
-                ++itEnd;
-            }
-            str.erase(itEnd, str.end());
-            Y = std::stod(str);
-
-            qDebug() << "Y = " + QString::number(Y);
-
-            break;
-        }
-    }
-
-    for (int i = posFrame - 1; i > 0; --i) {
-        std::string str = ui->lw_file->item(i)->text().toStdString();
-        auto it = std::find(str.begin(), str.end(), 'Z');
-        if (it != str.end()) {
-            str.erase(str.begin(), ++it);
-
-            auto itEnd = str.begin();
-            if (*itEnd == '-') {
-                ++itEnd;
-            }
-            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
-                ++itEnd;
-            }
-            str.erase(itEnd, str.end());
-            Z = std::stod(str);
-
-            qDebug() << "Z = " + QString::number(Z);
+            str += ")";
+            pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + ' ' + str + ' ');
+            pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " ;(" + it.value() + ")");
+            pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + ' ' + str + ' ');
 
             break;
         }
     }
-
-    for (int i = posFrame - 1; i > 0; --i) {
-        std::string str = ui->lw_file->item(i)->text().toStdString();
-        auto it = std::find(str.begin(), str.end(), 'F');
-        if (it != str.end()) {
-            str.erase(str.begin(), ++it);
-
-            auto itEnd = str.begin();
-            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
-                ++itEnd;
-            }
-            str.erase(itEnd, str.end());
-            F = std::stod(str);
-
-            qDebug() << "F = " + QString::number(F);
-
-            break;
-        }
+    pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " G" + QString::number(G) + " X" + QString::number(X) + " Y" + QString::number(Y) + " F" + QString::number(F) + ' ');
+    pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " Z" + QString::number(Z) + ' ');
+    for (int i = posFrame; i < ui->lw_file->count(); ++i) {
+        pOutForm->lwOutAddItem(ui->lw_file->item(i)->text());
     }
 
-    for (int i = posFrame - 1; i > 0; --i) {
-        std::string str = ui->lw_file->item(i)->text().toStdString();
-        auto it = std::find(str.begin(), str.end(), 'G');
-        if (it != str.end()) {
-            str.erase(str.begin(), ++it);
+    pProgressBar->setValue(pProgressBar->maximum());
+    ui->statusbar->removeWidget(pLabel);
+    ui->statusbar->removeWidget(pProgressBar);
+    pLabel->close();
+    pProgressBar->close();
 
-            auto itEnd = str.begin();
-            while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
-                ++itEnd;
-            }
-            str.erase(itEnd, str.end());
-            G = std::stoi(str);
-
-            qDebug() << "G = " + QString::number(G);
-            qDebug() << "Head = " + QString::number(head);
-
-            break;
-        }
-    }
+    pOutForm->exec();
 }

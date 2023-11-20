@@ -126,11 +126,18 @@
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
            <widget class="QListWidget" name="lw_file">
+            <property name="font">
+             <font>
+              <family>Lucida Console</family>
+              <pointsize>9</pointsize>
+              <kerning>true</kerning>
+             </font>
+            </property>
             <property name="alternatingRowColors">
              <bool>false</bool>
             </property>
             <property name="selectionMode">
-             <enum>QAbstractItemView::NoSelection</enum>
+             <enum>QAbstractItemView::SingleSelection</enum>
             </property>
             <property name="selectionBehavior">
              <enum>QAbstractItemView::SelectItems</enum>
