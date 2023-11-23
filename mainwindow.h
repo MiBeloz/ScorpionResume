@@ -42,7 +42,7 @@ private slots:
     void on_pb_calculate_clicked();
     void on_about_triggered();
     void rec_readyReadFile();
-    void rec_processingReady();
+    void rec_processingReady(bool result);
     void rec_showMessageError(QString error);
     void rec_warning(QString caution);
     void rec_showMessageEmptyFile();
@@ -53,10 +53,17 @@ private:
     About *pAboutWindow;
 
     QString mPathFile;
-    QStringList listFile;
+    QStringList mListFile;
     QString mTool;
-    int16_t head = 0;
-    QMap<int16_t, QString> typesOfProcessing;
+    int16_t mHead = 0;
+    QMap<int16_t, QString> mTypesOfProcessing;
+    size_t mCountOfFrames = 0;
+    int mFlag = 0;
+
+    QFuture<bool> ftrTypeOfProcessingReady;
+    QFuture<bool> ftrSetToolReady;
+    QFutureWatcher<bool> ftrWtchTypeOfProcessingReady;
+    QFutureWatcher<bool> ftrWtchSetToolReady;
 
     QLabel *pLabel;
     QProgressBar *pProgressBar;

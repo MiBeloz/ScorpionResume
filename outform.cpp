@@ -43,7 +43,7 @@ void OutForm::on_pb_save_clicked()
     }
     QTextStream stream( &out );
     for (int i = 0; i < ui->lw_out->count(); ++i) {
-        stream << ui->lw_out->item(i)->text() << endl;
+        stream << ui->lw_out->item(i)->text() << Qt::endl;
     }
     out.close();
 }

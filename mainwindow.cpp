@@ -26,7 +26,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     QObject::connect(this, &MainWindow::sig_emptyFile, this, &MainWindow::rec_showMessageEmptyFile);
     QObject::connect(this, &MainWindow::sig_incrementProgressBar, this, [&]{ ui->progressBar->setValue(ui->progressBar->value() + 1); });
     QObject::connect(this, &MainWindow::sig_readyReadFile, this, &MainWindow::rec_readyReadFile);
-    QObject::connect(this, &MainWindow::sig_processingReady, this, &MainWindow::rec_processingReady);
+    QObject::connect(&ftrWtchTypeOfProcessingReady, &QFutureWatcher<bool>::finished, this, [&](){ rec_processingReady(ftrTypeOfProcessingReady.result()); });
+    QObject::connect(&ftrWtchSetToolReady, &QFutureWatcher<bool>::finished, this, [&](){ rec_processingReady(ftrSetToolReady.result()); });
 }
 
 MainWindow::~MainWindow() {
@@ -49,7 +50,7 @@ void MainWindow::on_pb_loadFile_clicked() {
     setEnabledFileWidgets(false);
 
     ui->lb_progress->setText("Читаю файл...");
-    QtConcurrent::run([&](){
+    static_cast<void>(QtConcurrent::run([&](){
         mPathFile = ui->le_pathFile->text();
         QFile fileIn(mPathFile);
         if (!fileIn.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -59,22 +60,22 @@ void MainWindow::on_pb_loadFile_clicked() {
 
         while (!fileIn.atEnd()) {
             if (gUTF8) {    // Если текст в локальной 8-бит кодировке (windows-1251);
-                listFile.append(QString::fromUtf8(fileIn.readLine()));
+                mListFile.append(QString::fromUtf8(fileIn.readLine()));
             }
             else {          // Если текст в UTF-8
-                listFile.append(QString::fromLocal8Bit(fileIn.readLine()));
+                mListFile.append(QString::fromLocal8Bit(fileIn.readLine()));
             }
         }
         fileIn.close();
 
-        if (listFile.size() > 0) {
+        if (mListFile.size() > 0) {
             emit sig_readyReadFile();
         }
         else {
             setEnabledFileWidgets(true);
             emit sig_emptyFile();
         }
-    });
+    }));
 }
 
 void MainWindow::on_pb_calculate_clicked() {
@@ -120,14 +121,14 @@ void MainWindow::on_pb_calculate_clicked() {
     G = findAxisValue(posFrame, 'G', true);
     pProgressBar->setValue(5);
 
-    qDebug() << "Head = " + QString::number(head);
+    qDebug() << "Head = " + QString::number(mHead);
 
     pLabel->setText("Генерация УП...");
     pOutForm->lwOutClear();
-    for (int i = 0; i < head; ++i) {
-        pOutForm->lwOutAddItem(listFile[i]);
+    for (int i = 0; i < mHead; ++i) {
+        pOutForm->lwOutAddItem(mListFile[i]);
     }
-    for (auto it = typesOfProcessing.cend() - 1; it != typesOfProcessing.cbegin() - 1; --it) {
+    for (auto it = std::prev(mTypesOfProcessing.cend()); it != std::prev(mTypesOfProcessing.cbegin()); --it) {
         if (it.key() < posFrame) {
             QString str = ";(";
             for (int j = 0; j < it.value().size(); ++j) {
@@ -143,8 +144,8 @@ void MainWindow::on_pb_calculate_clicked() {
     }
     pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " G" + QString::number(G) + " X" + QString::number(X) + " Y" + QString::number(Y) + " F" + QString::number(F) + ' ');
     pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " Z" + QString::number(Z) + ' ');
-    for (int i = posFrame; i < listFile.size(); ++i) {
-        pOutForm->lwOutAddItem(listFile[i]);
+    for (int i = posFrame; i < mListFile.size(); ++i) {
+        pOutForm->lwOutAddItem(mListFile[i]);
     }
 
     pProgressBar->setValue(pProgressBar->maximum());
@@ -163,33 +164,31 @@ void MainWindow::on_about_triggered() {
 void MainWindow::rec_readyReadFile() {
     ui->lb_progress->setText("Обрабатываю файл...");
     emit sig_incrementProgressBar();
-    qDebug() << "increment";
 
-    size_t countOfFrames = 0;
-    for (int i = 0; i < listFile.size(); ++i) {
-        if (!listFile[i].isEmpty()) {
-            if (listFile[i][listFile[i].size() - 1] == '\n') {
-                listFile[i] = listFile[i].mid(0, listFile[i].size() - 1);
+    for (int i = 0; i < mListFile.size(); ++i) {
+        if (!mListFile[i].isEmpty()) {
+            if (mListFile[i][mListFile[i].size() - 1] == '\n') {
+                mListFile[i] = mListFile[i].mid(0, mListFile[i].size() - 1);
             }
         }
 
-        if (!listFile[i].isEmpty()) {
-            while (listFile[i][0] == 32 || listFile[i][0] == 9) {
-                listFile[i] = listFile[i].mid(1);
-                if (listFile[i].isEmpty()) {
+        if (!mListFile[i].isEmpty()) {
+            while (mListFile[i][0] == static_cast<char>(32) || mListFile[i][0] == static_cast<char>(9)) {
+                mListFile[i] = mListFile[i].mid(1);
+                if (mListFile[i].isEmpty()) {
                     break;
                 }
             }
         }
 
-        if (!listFile[i].isEmpty() && listFile[i][0] == 'N') {
-            ++countOfFrames;
+        if (!mListFile[i].isEmpty() && mListFile[i][0] == 'N') {
+            ++mCountOfFrames;
 
             if (i > 0) {
-                std::string str = listFile[i].toStdString();
+                std::string str = mListFile[i].toStdString();
                 size_t n = str.find('N' + std::to_string(i) + ' ');
                 if (n == std::string::npos) {
-                    emit sig_error("Файл программы поврежден!.\n"
+                    emit sig_error("Файл программы поврежден!\n"
                                    "Некорректная нумерация строк.");
                     return;
                 }
@@ -197,51 +196,58 @@ void MainWindow::rec_readyReadFile() {
         }
     }
 
-    for (int i = listFile.size() - 1; i > 11; --i) {
-        if (listFile[i].isEmpty()) {
-            listFile.pop_back();
+    for (int i = mListFile.size() - 1; i > 11; --i) {
+        if (mListFile[i].isEmpty()) {
+            mListFile.pop_back();
         }
         else {
-            if (listFile[i] == "M30" || listFile[i] == "M30 ") {
+            if (mListFile[i] == "M30" || mListFile[i] == "M30 ") {
                 break;
             }
             else {
-                emit sig_error("Файл программы поврежден!.\n"
+                emit sig_error("Файл программы поврежден!\n"
                                "Неожиданный конец программы.");
                 return;
             }
         }
     }
-    ui->lb_countOfFrames->setText(QString::number(countOfFrames));
 
     emit sig_incrementProgressBar();
-    qDebug() << "increment";
 
-
-    QFuture<bool> typeOfProcessingReady = QtConcurrent::run([&]() -> bool { return setTypeOfProcessing(); });
-    QFuture<bool> setToolReady = QtConcurrent::run([&]() -> bool { return setTool(); });
-
-//    QtConcurrent::run([&](){
-//        if (!setTool()) {
-//            return;
-//        }
-//        toolReady = setTool();
-//    });
-
-
-    emit sig_processingReady();
+    ftrTypeOfProcessingReady = QtConcurrent::run([&]() -> bool { return setTypeOfProcessing(); });
+    ftrWtchTypeOfProcessingReady.setFuture(ftrTypeOfProcessingReady);
+    ftrSetToolReady = QtConcurrent::run([&]() -> bool { return setTool(); });
+    ftrWtchSetToolReady.setFuture(ftrSetToolReady);
 }
 
-void MainWindow::rec_processingReady() {
-//    ui->lb_progress->setText("Загружаю данные...");
-    ui->lw_file->addItems(listFile);
+void MainWindow::rec_processingReady(bool result) {
+    if (result) {
+        ++mFlag;
+    }
 
-    setEnabledWidgets(true);
-    setEnabledFileWidgets(true);
-    ui->lb_tool->setText('T' + mTool);
+    if (mFlag == 2) {
+        ui->lw_file->addItems(mListFile);
 
-    ui->lb_progress->setText("Готово!");
-    ui->progressBar->setValue(ui->progressBar->maximum());
+        setEnabledWidgets(true);
+        setEnabledFileWidgets(true);
+        ui->lb_tool->setText('T' + mTool);
+        ui->lb_countOfFrames->setText(QString::number(mCountOfFrames));
+        if (mCountOfFrames - 2 >= 28) {
+            ui->spB_stopFrame->setRange(20, mCountOfFrames - 2);
+            ui->spB_stopFrame->setValue(20);
+        }
+        else {
+            ui->spB_stopFrame->setEnabled(false);
+            emit sig_warning("В программе слишком мало кадров\n"
+                             "для расчета возобновления программы.");
+        }
+
+        ui->lb_progress->setText("Готово!");
+        ui->progressBar->setValue(ui->progressBar->maximum());
+    }
+    else {
+        return;
+    }
 }
 
 void MainWindow::rec_showMessageError(QString error) {
@@ -285,7 +291,7 @@ void MainWindow::setEnabledFileWidgets(bool enabled) {
 
 bool MainWindow::setTypeOfProcessing() {
     bool findHead = false;
-    for (int i = 0; i < listFile.size(); ++i) {
+    for (int i = 0; i < mListFile.size(); ++i) {
         QString strOfProcessing = getStrOfProcessing(i);
         if (strOfProcessing.isEmpty()) {
             continue;
@@ -299,45 +305,44 @@ bool MainWindow::setTypeOfProcessing() {
         else {
             ui->lw_typeOfProcessing->addItem(frameOfProcessing + "\t" + typeOfProcessing);
         }
-        typesOfProcessing[i] = typeOfProcessing;
+        mTypesOfProcessing[i] = typeOfProcessing;
 
         if (ui->lw_typeOfProcessing->count() > 0 && !findHead) {
-            head = i - 1;
+            mHead = i - 1;
             findHead = true;
         }
     }
 
-    if (typesOfProcessing.isEmpty()) {
+    if (mTypesOfProcessing.isEmpty()) {
         emit sig_error("Программа повреждена!\n"
                        "Не найдено ни одного вида обработки.");
         return false;
     }
 
-    if (head < 12 || head > 12) {
-        emit sig_error("Файл программы поврежден!.\n"
+    if (mHead < 12 || mHead > 12) {
+        emit sig_error("Файл программы поврежден!\n"
                        "Некорректная шапка программы.");
         return false;
     }
 
     emit sig_incrementProgressBar();
-    qDebug() << "increment";
     return true;
 }
 
 QString MainWindow::getStrOfProcessing(int i) {
-    if (i < 1 || listFile.size() - 1 - i < 1) {
+    if (i < 1 || mListFile.size() - 1 - i < 1) {
         return "";
     }
 
-    QString processingBegin = deleteFrameNumber(listFile[i - 1]);
-    QString processing = deleteFrameNumber(listFile[i]);
-    QString processingEnd = deleteFrameNumber(listFile[i + 1]);
+    QString processingBegin = deleteFrameNumber(mListFile[i - 1]);
+    QString processing = deleteFrameNumber(mListFile[i]);
+    QString processingEnd = deleteFrameNumber(mListFile[i + 1]);
 
     if ((processing.size() > 5) &&
         (processing.size() == processingBegin.size() && processing.size() == processingEnd.size()) &&
         (processingBegin.mid(0, 5) == processingEnd.mid(0, 5) && processingBegin.mid(0, 5) == ";(---") &&
         (processing.mid(0, 2) == ";(")) {
-        return listFile[i];
+        return mListFile[i];
     }
     return "";
 }
@@ -373,7 +378,7 @@ bool MainWindow::setTool() {
     bool toolFinded = false;
     QString settingTool;
 
-    for (int i = 0; i < listFile.size(); ++i) {
+    for (int i = 0; i < mListFile.size(); ++i) {
         QString tool = getTool(i);
         if (tool.isEmpty()) {
             continue;
@@ -403,13 +408,12 @@ bool MainWindow::setTool() {
         return false;
     }
 
-    ui->lb_progress->setText("Загружаю данные...");
     emit sig_incrementProgressBar();
     return true;
 }
 
 QString MainWindow::getTool(int i) {
-    QString str = listFile[i];
+    QString str = mListFile[i];
 
     QString strFindTool = "TC_CHANGETOOL(";
     qsizetype n = str.indexOf(strFindTool);
@@ -425,8 +429,8 @@ QString MainWindow::getTool(int i) {
 }
 
 int MainWindow::findPosFrame(int frame) {
-    for (int i = 0; i < listFile[i].size(); ++i) {
-        std::string str = listFile[i].toStdString();
+    for (int i = 0; i < mListFile[i].size(); ++i) {
+        std::string str = mListFile[i].toStdString();
         size_t n = str.find('N' + std::to_string(frame));
 
         if (n != std::string::npos) {
@@ -438,7 +442,7 @@ int MainWindow::findPosFrame(int frame) {
 
 double MainWindow::findAxisValue(int posFrame, QChar axis, bool checkIJK) {
     for (int i = posFrame; i > 0; --i) {
-        std::string str = listFile[i].toStdString();
+        std::string str = mListFile[i].toStdString();
 
         bool strOK = false;
         if (checkIJK) {
@@ -480,10 +484,12 @@ double MainWindow::findAxisValue(int posFrame, QChar axis, bool checkIJK) {
 }
 
 void MainWindow::clearAll() {
-    listFile.clear();
+    mListFile.clear();
     mTool = "-";
-    head = 0;
-    typesOfProcessing.clear();
+    mHead = 0;
+    mTypesOfProcessing.clear();
+    mCountOfFrames = 0;
+    mFlag = 0;
 
     ui->lw_file->clear();
     ui->lw_typeOfProcessing->clear();
@@ -492,6 +498,8 @@ void MainWindow::clearAll() {
     ui->lb_progress->setText("-");
     ui->spB_stopFrame->setValue(0);
     ui->progressBar->setValue(0);
+    ui->spB_stopFrame->setRange(0, 0);
+    ui->spB_stopFrame->setValue(0);
     setEnabledWidgets(false);
 }
 
