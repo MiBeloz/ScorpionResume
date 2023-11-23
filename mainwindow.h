@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QMessageBox>
 #include <QDebug>
 #include <QMap>
 #include <QtConcurrent>
@@ -10,8 +11,8 @@
 #include <QFile>
 #include <QLabel>
 #include <QProgressBar>
-#include <QListWidget>
 
+#include "data.h"
 #include "outform.h"
 #include "about.h"
 
@@ -28,35 +29,53 @@ public:
     ~MainWindow();
 
 signals:
-    void sig_readyReadFile(QStringList strList);
+    void sig_error(QString error);
+    void sig_warning(QString caution);
+    void sig_emptyFile();
+    void sig_readyReadFile();
+    void sig_incrementProgressBar();
+    void sig_processingReady();
 
 private slots:
-    void rec_readyReadFile(QStringList strList);
-    void on_about_triggered();
     void on_pb_findFile_clicked();
-
-    void on_pb_ok_clicked();
+    void on_pb_loadFile_clicked();
+    void on_pb_calculate_clicked();
+    void on_about_triggered();
+    void rec_readyReadFile();
+    void rec_processingReady();
+    void rec_showMessageError(QString error);
+    void rec_warning(QString caution);
+    void rec_showMessageEmptyFile();
 
 private:
     Ui::MainWindow *ui;
     OutForm *pOutForm;
     About *pAboutWindow;
-    QString mDir = "G:/";
-    QFile mFile;
+
+    QString mPathFile;
+    QStringList listFile;
     QString mTool;
-    int head = 0;
-    QMap<int, QString> typesOfProcessing;
+    int16_t head = 0;
+    QMap<int16_t, QString> typesOfProcessing;
+
     QLabel *pLabel;
-    QListWidget *pListWidget;
     QProgressBar *pProgressBar;
 
-    void setEnabledWidgwts(bool enabled);
-    void setTypeOfProcessing();
-    void getTypeOfProcessing(QString type, int i);
-    void setTool();
-    void getTool(QString type, int i);
+
+    //QFuture<void> ftr;
+    //QFutureWatcher<void> ftrWtch;
+
+    void setEnabledWidgets(bool enabled);
+    void setEnabledFileWidgets(bool enabled);
+    bool setTypeOfProcessing();
+    QString getStrOfProcessing(int i);
+    QString getTypeOfProcessing(QString str);
+    QString getFrameOfProcessing(QString str);
+    bool setTool();
+    QString getTool(int i);
     int findPosFrame(int frame);
     double findAxisValue(int posFrame, QChar axis, bool checkIJK);
     void clearAll();
+    QString deleteFrameNumber(QString str);
 };
 #endif // MAINWINDOW_H

@@ -20,6 +20,8 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Concurrent)
 
 set(PROJECT_SOURCES
     main.cpp
+    data.cpp
+    data.h
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui

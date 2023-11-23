@@ -35,7 +35,7 @@ void OutForm::on_pb_close_clicked()
 
 void OutForm::on_pb_save_clicked()
 {
-    QString path = QFileDialog::getSaveFileName(this, tr("Сохранить"), "G:/", tr("MPF файлы (*.MPF)"));
+    QString path = QFileDialog::getSaveFileName(this, tr("Сохранить"), gDir, tr("MPF файлы (*.MPF)"));
 
     QFile out(path);
     if(!out.open(QIODevice::WriteOnly | QIODevice::Text)) {

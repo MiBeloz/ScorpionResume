@@ -5,6 +5,8 @@
 #include <QFileDialog>
 #include <QTextStream>
 
+#include "data.h"
+
 namespace Ui {
 class OutForm;
 }

@@ -1,310 +1,83 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-{
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
+    pOutForm = new OutForm(this);
+    pAboutWindow = new About(this);
+
     pLabel = new QLabel(this);
     pLabel->setVisible(false);
-    pListWidget = new QListWidget(this);
-    pListWidget->setVisible(false);
     pProgressBar = new QProgressBar(this);
+    pProgressBar->setAlignment(Qt::AlignCenter);
     pProgressBar->setVisible(false);
 
-    ui->progressBarAll->setMinimum(0);
-    ui->progressBarAll->setValue(0);
-    ui->progressBarLocal->setMinimum(0);
-    ui->progressBarLocal->setValue(0);
+    ui->progressBar->setValue(0);
+    ui->pb_loadFile->setEnabled(false);
+    setEnabledWidgets(false);
 
-    setEnabledWidgwts(false);
+    QObject::connect(ui->le_pathFile, &QLineEdit::textChanged, this, [&]{
+        QFile file(ui->le_pathFile->text());
+        file.exists() ? ui->pb_loadFile->setEnabled(true) : ui->pb_loadFile->setEnabled(false); });
 
-    pAboutWindow = new About(this);
-    pOutForm = new OutForm(this);
-
+    QObject::connect(ui->pb_clear, &QPushButton::clicked, this, &MainWindow::clearAll);
+    QObject::connect(this, &MainWindow::sig_error, this, &MainWindow::rec_showMessageError);
+    QObject::connect(this, &MainWindow::sig_warning, this, &MainWindow::rec_warning);
+    QObject::connect(this, &MainWindow::sig_emptyFile, this, &MainWindow::rec_showMessageEmptyFile);
+    QObject::connect(this, &MainWindow::sig_incrementProgressBar, this, [&]{ ui->progressBar->setValue(ui->progressBar->value() + 1); });
     QObject::connect(this, &MainWindow::sig_readyReadFile, this, &MainWindow::rec_readyReadFile);
+    QObject::connect(this, &MainWindow::sig_processingReady, this, &MainWindow::rec_processingReady);
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     delete ui;
 }
 
-void MainWindow::rec_readyReadFile(QStringList strList)
-{
-    ui->progressBarLocal->setMinimum(0);
-    ui->progressBarLocal->setMaximum(strList.size() + 1);
-    ui->progressBarLocal->setValue(0);
-    ui->lb_progress->setText("Чтение файла...");
+void MainWindow::on_pb_findFile_clicked() {
+    ui->le_pathFile->setText(QFileDialog::getOpenFileName(this, tr("Открыть"), gDir, tr("MPF файлы (*.MPF)")));
+    if (mPathFile != ui->le_pathFile->text()) {
+        clearAll();
+        setEnabledWidgets(false);
+        ui->pb_loadFile->setEnabled(true);
+    }
+}
 
-    size_t countOfFrames = 0;
+void MainWindow::on_pb_loadFile_clicked() {
+    clearAll();
+    ui->progressBar->setRange(0, 5);
+    ui->progressBar->setValue(0);
+    setEnabledFileWidgets(false);
 
-    for (int i = 0; i < strList.size(); ++i) {
-        if (strList[i][strList[i].size() - 1] == '\n') {
-            strList[i] = strList[i].mid(0, strList[i].size() - 1);
+    ui->lb_progress->setText("Читаю файл...");
+    QtConcurrent::run([&](){
+        mPathFile = ui->le_pathFile->text();
+        QFile fileIn(mPathFile);
+        if (!fileIn.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            emit sig_error("Ошибка открытия файла!");
+            return;
         }
 
-        while (strList[i][0] == 32 || strList[i][0] == 9) {
-            strList[i] = strList[i].mid(1);
-            if (strList[i].size() <= 0) {
-                break;
+        while (!fileIn.atEnd()) {
+            if (gUTF8) {    // Если текст в локальной 8-бит кодировке (windows-1251);
+                listFile.append(QString::fromUtf8(fileIn.readLine()));
+            }
+            else {          // Если текст в UTF-8
+                listFile.append(QString::fromLocal8Bit(fileIn.readLine()));
             }
         }
+        fileIn.close();
 
-        if (strList[i].size() > 0 && (strList[i][0] == 'N' || strList[i][0] == 'M')) {
-            ++countOfFrames;
+        if (listFile.size() > 0) {
+            emit sig_readyReadFile();
         }
-
-        ui->lw_file->addItem(strList[i]);
-
-        ui->progressBarLocal->setValue(i + 1);
-    }
-    ui->progressBarLocal->setValue(ui->progressBarLocal->maximum());
-    ui->progressBarAll->setValue(1);
-
-    setTypeOfProcessing();
-    setTool();
-
-    setEnabledWidgwts(true);
-
-    //qDebug() << strList.size();
-    //qDebug() << ui->lw_file->count();
-
-    ui->lb_countOfFrames->setText(QString::number(countOfFrames));
-    ui->lb_tool->setText(mTool);
-    ui->lb_progress->setText("Готово!");
-
-    ui->progressBarAll->setValue(ui->progressBarAll->maximum());
-}
-
-void MainWindow::setEnabledWidgwts(bool enabled)
-{
-    ui->grB_info->setEnabled(enabled);
-    ui->grB_settings->setEnabled(enabled);
-    ui->pb_ok->setEnabled(enabled);
-    ui->pb_clear->setEnabled(enabled);
-    ui->lw_file->setEnabled(enabled);
-}
-
-void MainWindow::on_about_triggered()
-{
-    pAboutWindow->exec();
-}
-
-void MainWindow::on_pb_findFile_clicked()
-{
-    ui->le_pathFile->setText(QFileDialog::getOpenFileName(this, tr("Открыть"), mDir, tr("MPF файлы (*.MPF)")));
-
-    clearAll();
-    setEnabledWidgwts(false);
-
-    ui->progressBarAll->setMinimum(0);
-    ui->progressBarAll->setMaximum(4);
-    ui->progressBarAll->setValue(0);
-
-    mFile.setFileName(ui->le_pathFile->text());
-
-    QtConcurrent::run([&](){ if (!mFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                                return;
-                            }
-
-                            QStringList strList;
-                            while (!mFile.atEnd()) {
-                                QByteArray data = mFile.readLine();
-
-                                // Если текст в локальной 8-бит кодировке (windows-1251);
-                                QString fileLine = QString::fromLocal8Bit(data);
-
-                                // Если текст в UTF-8
-                                //text = QString::fromUtf8(data);
-
-                                strList.append(fileLine);
-                            }
-                            mFile.close();
-
-                            sig_readyReadFile(strList);
+        else {
+            setEnabledFileWidgets(true);
+            emit sig_emptyFile();
+        }
     });
 }
 
-void MainWindow::setTypeOfProcessing()
-{
-    ui->progressBarLocal->setMinimum(0);
-    ui->progressBarLocal->setMaximum(ui->lw_file->count() + 1);
-    ui->progressBarLocal->setValue(0);
-    ui->lb_progress->setText("Чтение видов обработок...");
-
-    bool findHead = false;
-    for (int i = 0; i < ui->lw_file->count(); ++i) {
-        getTypeOfProcessing("HSR-", i);
-        getTypeOfProcessing("HSM-", i);
-        if (ui->lw_typeOfProcessing->count() > 0 && !findHead) {
-            head = i;
-            size_t n = 0;
-            do {
-                head--;
-                std::string str = ui->lw_file->item(head)->text().toStdString();
-                std::string strFind = 'N' + std::to_string(head) + " ;";
-                n = str.find(strFind);
-            }
-            while (n != std::string::npos);
-            findHead = true;
-        }
-
-        ui->progressBarLocal->setValue(i + 1);
-    }
-    ui->progressBarLocal->setValue(ui->progressBarLocal->maximum());
-    ui->progressBarAll->setValue(2);
-}
-
-void MainWindow::getTypeOfProcessing(QString type, int i)
-{
-    std::string str = ui->lw_file->item(i)->text().toStdString();
-    size_t j = str.find(type.toStdString());
-
-    if (j != std::string::npos) {
-        //qDebug() << j;
-        {
-            auto it = str.begin();
-            std::advance(it, j);
-            str.erase(str.begin(), it);
-        }
-        {
-            auto it = std::find(str.begin(), str.end(), ')');
-            if (it != str.end()) {
-                str.erase(it, str.end());
-                ui->lw_typeOfProcessing->addItem('N' + QString::number(i) + "\t\t" + QString::fromStdString(str));
-                typesOfProcessing[i] = QString::fromStdString(str);
-            }
-        }
-    }
-}
-
-void MainWindow::setTool()
-{
-    ui->progressBarLocal->setMinimum(0);
-    ui->progressBarLocal->setMaximum(ui->lw_file->count() + 1);
-    ui->progressBarLocal->setValue(0);
-    ui->lb_progress->setText("Чтение данных инструмента...");
-
-    for (int i = 0; i < ui->lw_file->count(); ++i) {
-        getTool("TC_CHANGETOOL(", i);
-
-        ui->progressBarLocal->setValue(i + 1);
-    }
-    ui->progressBarLocal->setValue(ui->progressBarLocal->maximum());
-    ui->lb_progress->setText("Почти готово, подождите...");
-    ui->progressBarAll->setValue(3);
-}
-
-void MainWindow::getTool(QString type, int i)
-{
-    std::string str = ui->lw_file->item(i)->text().toStdString();
-    size_t j = str.find(type.toStdString());
-
-    if (j != std::string::npos) {
-        //qDebug() << j;
-        {
-            auto it = str.begin();
-            std::advance(it, j + 14);
-            str.erase(str.begin(), it);
-        }
-        {
-            auto it = std::find(str.begin(), str.end(), ',');
-            if (it != str.end()) {
-                str.erase(it, str.end());
-
-                if (QString::fromStdString(str).size() > 0) {
-                    while (QString::fromStdString(str)[0] == 32 || QString::fromStdString(str)[0] == 9) {
-                        QString::fromStdString(str) = QString::fromStdString(str).mid(1);
-                    }
-                }
-
-                if (ui->lb_tool->text() == "-") {
-                    mTool = 'T' + QString::fromStdString(str);
-                }
-                else {
-                    mTool = ui->lb_tool->text() + ", T" + QString::fromStdString(str);
-                }
-            }
-        }
-    }
-}
-
-int MainWindow::findPosFrame(int frame)
-{
-    for (int i = 0; i < ui->lw_file->count(); ++i) {
-        std::string str = ui->lw_file->item(i)->text().toStdString();
-        size_t n = str.find('N' + std::to_string(frame));
-
-        if (n != std::string::npos) {
-            return i;
-        }
-    }
-    return 1;
-}
-
-double MainWindow::findAxisValue(int posFrame, QChar axis, bool checkIJK)
-{
-    for (int i = posFrame; i > 0; --i) {
-        std::string str = ui->lw_file->item(i)->text().toStdString();
-
-        bool strOK = false;
-        if (checkIJK) {
-            auto itK = std::find(str.begin(), str.end(), 'K');
-            if (itK == str.end()) {
-                auto itJ = std::find(str.begin(), str.end(), 'J');
-                if (itJ == str.end()) {
-                    auto itI = std::find(str.begin(), str.end(), 'I');
-                    if (itI == str.end()) {
-                        strOK = true;
-                    }
-                }
-            }
-        }
-        else {
-            strOK = true;
-        }
-
-        if (strOK) {
-            auto it = std::find(str.begin(), str.end(), axis);
-            if (it != str.end()) {
-                str.erase(str.begin(), ++it);
-
-                auto itEnd = str.begin();
-                if (*itEnd == '-') {
-                    ++itEnd;
-                }
-                while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
-                    ++itEnd;
-                }
-                str.erase(itEnd, str.end());
-
-                qDebug() << static_cast<QString>(axis) + " = " + QString::number(std::stod(str));
-                return std::stod(str);
-            }
-        }
-    }
-    return -10000;
-}
-
-void MainWindow::clearAll()
-{
-    ui->lw_file->clear();
-    ui->lw_typeOfProcessing->clear();
-    ui->lb_tool->setText("-");
-    mTool = "-";
-    head = 0;
-    typesOfProcessing.clear();
-    ui->lb_countOfFrames->setText("-");
-    ui->lb_progress->setText("-");
-    ui->spB_stopFrame->setValue(0);
-    ui->progressBarAll->setValue(0);
-    ui->progressBarLocal->setValue(0);
-}
-
-void MainWindow::on_pb_ok_clicked()
-{
+void MainWindow::on_pb_calculate_clicked() {
     int frame = ui->spB_stopFrame->value();
     int posFrame = 1;
     double X = 0, Y = 0, Z = 50;
@@ -351,8 +124,8 @@ void MainWindow::on_pb_ok_clicked()
 
     pLabel->setText("Генерация УП...");
     pOutForm->lwOutClear();
-    for (int i = 0; i < head + 1; ++i) {
-        pOutForm->lwOutAddItem(ui->lw_file->item(i)->text());
+    for (int i = 0; i < head; ++i) {
+        pOutForm->lwOutAddItem(listFile[i]);
     }
     for (auto it = typesOfProcessing.cend() - 1; it != typesOfProcessing.cbegin() - 1; --it) {
         if (it.key() < posFrame) {
@@ -370,8 +143,8 @@ void MainWindow::on_pb_ok_clicked()
     }
     pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " G" + QString::number(G) + " X" + QString::number(X) + " Y" + QString::number(Y) + " F" + QString::number(F) + ' ');
     pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " Z" + QString::number(Z) + ' ');
-    for (int i = posFrame; i < ui->lw_file->count(); ++i) {
-        pOutForm->lwOutAddItem(ui->lw_file->item(i)->text());
+    for (int i = posFrame; i < listFile.size(); ++i) {
+        pOutForm->lwOutAddItem(listFile[i]);
     }
 
     pProgressBar->setValue(pProgressBar->maximum());
@@ -380,5 +153,364 @@ void MainWindow::on_pb_ok_clicked()
     pLabel->close();
     pProgressBar->close();
 
-    pOutForm->exec();
+    pOutForm->show();
+}
+
+void MainWindow::on_about_triggered() {
+    pAboutWindow->exec();
+}
+
+void MainWindow::rec_readyReadFile() {
+    ui->lb_progress->setText("Обрабатываю файл...");
+    emit sig_incrementProgressBar();
+    qDebug() << "increment";
+
+    size_t countOfFrames = 0;
+    for (int i = 0; i < listFile.size(); ++i) {
+        if (!listFile[i].isEmpty()) {
+            if (listFile[i][listFile[i].size() - 1] == '\n') {
+                listFile[i] = listFile[i].mid(0, listFile[i].size() - 1);
+            }
+        }
+
+        if (!listFile[i].isEmpty()) {
+            while (listFile[i][0] == 32 || listFile[i][0] == 9) {
+                listFile[i] = listFile[i].mid(1);
+                if (listFile[i].isEmpty()) {
+                    break;
+                }
+            }
+        }
+
+        if (!listFile[i].isEmpty() && listFile[i][0] == 'N') {
+            ++countOfFrames;
+
+            if (i > 0) {
+                std::string str = listFile[i].toStdString();
+                size_t n = str.find('N' + std::to_string(i) + ' ');
+                if (n == std::string::npos) {
+                    emit sig_error("Файл программы поврежден!.\n"
+                                   "Некорректная нумерация строк.");
+                    return;
+                }
+            }
+        }
+    }
+
+    for (int i = listFile.size() - 1; i > 11; --i) {
+        if (listFile[i].isEmpty()) {
+            listFile.pop_back();
+        }
+        else {
+            if (listFile[i] == "M30" || listFile[i] == "M30 ") {
+                break;
+            }
+            else {
+                emit sig_error("Файл программы поврежден!.\n"
+                               "Неожиданный конец программы.");
+                return;
+            }
+        }
+    }
+    ui->lb_countOfFrames->setText(QString::number(countOfFrames));
+
+    emit sig_incrementProgressBar();
+    qDebug() << "increment";
+
+
+    QFuture<bool> typeOfProcessingReady = QtConcurrent::run([&]() -> bool { return setTypeOfProcessing(); });
+    QFuture<bool> setToolReady = QtConcurrent::run([&]() -> bool { return setTool(); });
+
+//    QtConcurrent::run([&](){
+//        if (!setTool()) {
+//            return;
+//        }
+//        toolReady = setTool();
+//    });
+
+
+    emit sig_processingReady();
+}
+
+void MainWindow::rec_processingReady() {
+//    ui->lb_progress->setText("Загружаю данные...");
+    ui->lw_file->addItems(listFile);
+
+    setEnabledWidgets(true);
+    setEnabledFileWidgets(true);
+    ui->lb_tool->setText('T' + mTool);
+
+    ui->lb_progress->setText("Готово!");
+    ui->progressBar->setValue(ui->progressBar->maximum());
+}
+
+void MainWindow::rec_showMessageError(QString error) {
+    clearAll();
+    setEnabledFileWidgets(true);
+    mPathFile.clear();
+    QMessageBox mBox;
+    mBox.setWindowTitle("Ошибка!");
+    mBox.setIcon(QMessageBox::Icon::Critical);
+    mBox.setText(error);
+    mBox.addButton(QMessageBox::Button::Ok);
+    mBox.exec();
+}
+
+void MainWindow::rec_warning(QString caution) {
+    QMessageBox mBox;
+    mBox.setWindowTitle("Предупреждение!");
+    mBox.setIcon(QMessageBox::Icon::Warning);
+    mBox.setText(caution);
+    mBox.addButton(QMessageBox::Button::Ok);
+    mBox.exec();
+}
+
+void MainWindow::rec_showMessageEmptyFile() {
+    clearAll();
+    QMessageBox mBox;
+    mBox.setWindowTitle("Предупреждение!");
+    mBox.setIcon(QMessageBox::Icon::Warning);
+    mBox.setText("Чтение файла невозможно!\n"
+                 "Пустой файл!");
+    mBox.addButton(QMessageBox::Button::Ok);
+    mBox.exec();
+}
+
+void MainWindow::setEnabledFileWidgets(bool enabled) {
+    ui->le_pathFile->setEnabled(enabled);
+    ui->pb_loadFile->setEnabled(enabled);
+    ui->pb_findFile->setEnabled(enabled);
+    ui->menubar->setEnabled(enabled);
+}
+
+bool MainWindow::setTypeOfProcessing() {
+    bool findHead = false;
+    for (int i = 0; i < listFile.size(); ++i) {
+        QString strOfProcessing = getStrOfProcessing(i);
+        if (strOfProcessing.isEmpty()) {
+            continue;
+        }
+        QString typeOfProcessing = getTypeOfProcessing(strOfProcessing);
+        QString frameOfProcessing = getFrameOfProcessing(strOfProcessing);
+        auto it = dictionary.find(typeOfProcessing);
+        if (it != dictionary.end()) {
+            ui->lw_typeOfProcessing->addItem(frameOfProcessing + "\t" + *it);
+        }
+        else {
+            ui->lw_typeOfProcessing->addItem(frameOfProcessing + "\t" + typeOfProcessing);
+        }
+        typesOfProcessing[i] = typeOfProcessing;
+
+        if (ui->lw_typeOfProcessing->count() > 0 && !findHead) {
+            head = i - 1;
+            findHead = true;
+        }
+    }
+
+    if (typesOfProcessing.isEmpty()) {
+        emit sig_error("Программа повреждена!\n"
+                       "Не найдено ни одного вида обработки.");
+        return false;
+    }
+
+    if (head < 12 || head > 12) {
+        emit sig_error("Файл программы поврежден!.\n"
+                       "Некорректная шапка программы.");
+        return false;
+    }
+
+    emit sig_incrementProgressBar();
+    qDebug() << "increment";
+    return true;
+}
+
+QString MainWindow::getStrOfProcessing(int i) {
+    if (i < 1 || listFile.size() - 1 - i < 1) {
+        return "";
+    }
+
+    QString processingBegin = deleteFrameNumber(listFile[i - 1]);
+    QString processing = deleteFrameNumber(listFile[i]);
+    QString processingEnd = deleteFrameNumber(listFile[i + 1]);
+
+    if ((processing.size() > 5) &&
+        (processing.size() == processingBegin.size() && processing.size() == processingEnd.size()) &&
+        (processingBegin.mid(0, 5) == processingEnd.mid(0, 5) && processingBegin.mid(0, 5) == ";(---") &&
+        (processing.mid(0, 2) == ";(")) {
+        return listFile[i];
+    }
+    return "";
+}
+
+QString MainWindow::getTypeOfProcessing(QString str) {
+    std::string typeOfProcessing = deleteFrameNumber(str).toStdString();
+    size_t n = typeOfProcessing.find(" - ");
+    if (n != std::string::npos) {
+        auto itBegin = typeOfProcessing.begin();
+        std::advance(itBegin, n + 3);
+        typeOfProcessing.erase(typeOfProcessing.begin(), itBegin);
+        auto itEnd = typeOfProcessing.begin();
+        while (*itEnd != ')') {
+            ++itEnd;
+        }
+        typeOfProcessing.erase(itEnd, typeOfProcessing.end());
+        return QString::fromStdString(typeOfProcessing);
+    }
+    return "Unknown";
+}
+
+QString MainWindow::getFrameOfProcessing(QString str) {
+    std::string frameOfProcessing = str.toStdString();
+    auto it = std::find(frameOfProcessing.begin(), frameOfProcessing.end(), ' ');
+    if (it != frameOfProcessing.end()) {
+        frameOfProcessing.erase(it, frameOfProcessing.end());
+        return QString::fromStdString(frameOfProcessing);
+    }
+    return "---";
+}
+
+bool MainWindow::setTool() {
+    bool toolFinded = false;
+    QString settingTool;
+
+    for (int i = 0; i < listFile.size(); ++i) {
+        QString tool = getTool(i);
+        if (tool.isEmpty()) {
+            continue;
+        }
+        else {
+            if (!toolFinded) {
+                toolFinded = true;
+                settingTool = tool;
+                mTool = tool;
+            }
+            else if (settingTool == tool) {
+                emit sig_warning("Возможно в программе используется разное\n"
+                                 "количество оборотов или направление вращения\n"
+                                 "для одного инструмента.");
+            }
+            else {
+                emit sig_error("Обаботка программы невозможна!\n"
+                               "В программе используется более одного инструмента.");
+                return false;
+            }
+        }
+    }
+
+    if (!toolFinded) {
+        emit sig_error("Программа повреждена!\n"
+                       "Не найдено ни одного инструмента.");
+        return false;
+    }
+
+    ui->lb_progress->setText("Загружаю данные...");
+    emit sig_incrementProgressBar();
+    return true;
+}
+
+QString MainWindow::getTool(int i) {
+    QString str = listFile[i];
+
+    QString strFindTool = "TC_CHANGETOOL(";
+    qsizetype n = str.indexOf(strFindTool);
+    if (n != -1) {
+        str = str.mid(n + strFindTool.size());
+        n = str.indexOf(',');
+        if (n != -1) {
+            str = str.mid(0, n);
+            return str;
+        }
+    }
+    return "";
+}
+
+int MainWindow::findPosFrame(int frame) {
+    for (int i = 0; i < listFile[i].size(); ++i) {
+        std::string str = listFile[i].toStdString();
+        size_t n = str.find('N' + std::to_string(frame));
+
+        if (n != std::string::npos) {
+            return i;
+        }
+    }
+    return 1;
+}
+
+double MainWindow::findAxisValue(int posFrame, QChar axis, bool checkIJK) {
+    for (int i = posFrame; i > 0; --i) {
+        std::string str = listFile[i].toStdString();
+
+        bool strOK = false;
+        if (checkIJK) {
+            auto itK = std::find(str.begin(), str.end(), 'K');
+            if (itK == str.end()) {
+                auto itJ = std::find(str.begin(), str.end(), 'J');
+                if (itJ == str.end()) {
+                    auto itI = std::find(str.begin(), str.end(), 'I');
+                    if (itI == str.end()) {
+                        strOK = true;
+                    }
+                }
+            }
+        }
+        else {
+            strOK = true;
+        }
+
+        if (strOK) {
+            auto it = std::find(str.begin(), str.end(), axis);
+            if (it != str.end()) {
+                str.erase(str.begin(), ++it);
+
+                auto itEnd = str.begin();
+                if (*itEnd == '-') {
+                    ++itEnd;
+                }
+                while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
+                    ++itEnd;
+                }
+                str.erase(itEnd, str.end());
+
+                qDebug() << static_cast<QString>(axis) + " = " + QString::number(std::stod(str));
+                return std::stod(str);
+            }
+        }
+    }
+    return -100000;
+}
+
+void MainWindow::clearAll() {
+    listFile.clear();
+    mTool = "-";
+    head = 0;
+    typesOfProcessing.clear();
+
+    ui->lw_file->clear();
+    ui->lw_typeOfProcessing->clear();
+    ui->lb_tool->setText(mTool);
+    ui->lb_countOfFrames->setText("-");
+    ui->lb_progress->setText("-");
+    ui->spB_stopFrame->setValue(0);
+    ui->progressBar->setValue(0);
+    setEnabledWidgets(false);
+}
+
+QString MainWindow::deleteFrameNumber(QString str) {
+    std::string strString = str.toStdString();
+    auto it = std::find(strString.begin(), strString.end(), ' ');
+    if (it != strString.end()) {
+        while (*it == ' ') {
+            ++it;
+        }
+        strString.erase(strString.begin(), it);
+    }
+    return QString::fromStdString(strString);
+}
+
+void MainWindow::setEnabledWidgets(bool enabled) {
+    ui->grB_info->setEnabled(enabled);
+    ui->grB_settings->setEnabled(enabled);
+    ui->pb_calculate->setEnabled(enabled);
+    ui->pb_clear->setEnabled(enabled);
+    ui->lw_file->setEnabled(enabled);
 }
