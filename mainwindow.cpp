@@ -8,12 +8,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     QPixmap pixmap(":/picture.png");
     setWindowIcon(pixmap);
 
-    pLabel = new QLabel(this);
-    pLabel->setVisible(false);
-    pProgressBar = new QProgressBar(this);
-    pProgressBar->setAlignment(Qt::AlignCenter);
-    pProgressBar->setVisible(false);
-
     ui->progressBar->setValue(0);
     ui->pb_loadFile->setEnabled(false);
     setEnabledWidgets(false);
@@ -141,7 +135,7 @@ void MainWindow::on_pb_calculate_clicked() {
     qDebug() << "F = " + QString::number(F);
     qDebug() << "G = " + QString::number(G);
 
-    pLabel->setText("Генерация УП...");
+    ui->lb_progress->setText("Генерация УП...");
     pOutForm->lwOutClear();
 
     for (int i = 0; i < mHead; ++i) {
@@ -191,6 +185,10 @@ void MainWindow::on_pb_calculate_clicked() {
 
     ui->lb_progress->setText("Готово!");
     ui->progressBar->setValue(ui->progressBar->maximum());
+}
+
+void MainWindow::on_pb_fundFrame_clicked() {
+    ui->lw_file->setCurrentRow(ui->spB_findFrame->value(), QItemSelectionModel::SelectionFlag::SelectCurrent);
 }
 
 void MainWindow::on_mb_help_about_triggered() {
@@ -276,6 +274,8 @@ void MainWindow::rec_processingReady(bool result) {
         if (mCountOfFrames - 2 >= 28) {
             ui->spB_stopFrame->setRange(20, mCountOfFrames - 2);
             ui->spB_stopFrame->setValue(20);
+            ui->spB_findFrame->setRange(1, mCountOfFrames - 2);
+            ui->spB_findFrame->setValue(1);
         }
         else {
             ui->spB_stopFrame->setEnabled(false);
@@ -542,6 +542,8 @@ void MainWindow::clearAll() {
     ui->progressBar->setValue(0);
     ui->spB_stopFrame->setRange(0, 0);
     ui->spB_stopFrame->setValue(0);
+    ui->spB_findFrame->setRange(0, 0);
+    ui->spB_findFrame->setValue(0);
     setEnabledWidgets(false);
 }
 
@@ -560,6 +562,7 @@ QString MainWindow::deleteFrameNumber(QString str) {
 void MainWindow::setEnabledWidgets(bool enabled) {
     ui->grB_info->setEnabled(enabled);
     ui->grB_settings->setEnabled(enabled);
+    ui->grB_findFrame->setEnabled(enabled);
     ui->pb_calculate->setEnabled(enabled);
     ui->pb_clear->setEnabled(enabled);
     ui->lw_file->setEnabled(enabled);

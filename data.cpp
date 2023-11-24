@@ -1,7 +1,7 @@
 #include "data.h"
 
 QString versionMajor = "2";
-QString versionMinor = "0";
+QString versionMinor = "1";
 QString versionMicro = "0";
 
 QString gDir {"G:/"};

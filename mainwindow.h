@@ -42,6 +42,7 @@ private slots:
     void on_pb_findFile_clicked();
     void on_pb_loadFile_clicked();
     void on_pb_calculate_clicked();
+    void on_pb_fundFrame_clicked();
     void on_mb_help_about_triggered();
     void on_mb_file_exit_triggered();
     void rec_readyReadFile();
@@ -69,13 +70,6 @@ private:
     QFuture<bool> ftrSetToolReady;
     QFutureWatcher<bool> ftrWtchTypeOfProcessingReady;
     QFutureWatcher<bool> ftrWtchSetToolReady;
-
-    QLabel *pLabel;
-    QProgressBar *pProgressBar;
-
-
-    //QFuture<void> ftr;
-    //QFutureWatcher<void> ftrWtch;
 
     void setEnabledWidgets(bool enabled);
     void setEnabledFileWidgets(bool enabled);
