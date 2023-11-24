@@ -5,6 +5,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->setupUi(this);
     pOutForm = new OutForm(this);
     pAboutWindow = new About(this);
+    QPixmap pixmap(":/picture.png");
+    setWindowIcon(pixmap);
 
     pLabel = new QLabel(this);
     pLabel->setVisible(false);
@@ -22,6 +24,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     QObject::connect(ui->pb_clear, &QPushButton::clicked, this, &MainWindow::clearAll);
     QObject::connect(this, &MainWindow::sig_error, this, &MainWindow::rec_showMessageError);
+    QObject::connect(this, &MainWindow::sig_errorCalculate, this, &MainWindow::rec_showMessageErrorCalculate);
     QObject::connect(this, &MainWindow::sig_warning, this, &MainWindow::rec_warning);
     QObject::connect(this, &MainWindow::sig_emptyFile, this, &MainWindow::rec_showMessageEmptyFile);
     QObject::connect(this, &MainWindow::sig_incrementProgressBar, this, [&]{ ui->progressBar->setValue(ui->progressBar->value() + 1); });
@@ -79,87 +82,125 @@ void MainWindow::on_pb_loadFile_clicked() {
 }
 
 void MainWindow::on_pb_calculate_clicked() {
-    int frame = ui->spB_stopFrame->value();
-    int posFrame = 1;
+    size_t frame = ui->spB_stopFrame->value();
     double X = 0, Y = 0, Z = 50;
     double F = 0;
     int G = 0;
-    if (frame < 1) {
-        return;
-    }
+    double chekCommandValue = -100000;
 
     qDebug() << QString::fromStdString(std::to_string(frame));
 
-    pProgressBar->setMinimum(0);
-    pProgressBar->setMaximum(6);
-    pProgressBar->setValue(0);
-    pLabel->setMinimumSize(100, 13);
-    ui->statusbar->addWidget(pLabel);
-    ui->statusbar->addWidget(pProgressBar);
-    pLabel->show();
-    pProgressBar->show();
+    ui->progressBar->setRange(0, 6);
+    ui->progressBar->setValue(0);
 
-    posFrame = findPosFrame(frame);
+    ui->lb_progress->setText("Ищу X, Y, Z, F, G...");
+    X = findValue(frame, 'X', true);
+    if (X < chekCommandValue) {
+        emit sig_errorCalculate("Ошибка поиска!\n"
+                                "'X' не найден.");
+        return;
+    }
+    emit sig_incrementProgressBar();
 
-    pLabel->setText("Поиск 'X'...");
-    X = findAxisValue(posFrame, 'X', true);
-    pProgressBar->setValue(1);
+    Y = findValue(frame, 'Y', true);
+    if (Y < chekCommandValue) {
+        emit sig_errorCalculate("Ошибка поиска!\n"
+                                "'Y' не найден.");
+        return;
+    }
+    emit sig_incrementProgressBar();
 
-    pLabel->setText("Поиск 'Y'...");
-    Y = findAxisValue(posFrame, 'Y', true);
-    pProgressBar->setValue(2);
+    Z = findValue(frame, 'Z', false);
+    if (Z < chekCommandValue) {
+        emit sig_errorCalculate("Ошибка поиска!\n"
+                                "'Z' не найден.");
+        return;
+    }
+    emit sig_incrementProgressBar();
 
-    pLabel->setText("Поиск 'Z'...");
-    Z = findAxisValue(posFrame, 'Z', false);
-    pProgressBar->setValue(3);
+    F = findValue(frame, 'F', false);
+    if (F < chekCommandValue) {
+        emit sig_errorCalculate("Ошибка поиска!\n"
+                                "'X' не найден.");
+        return;
+    }
+    emit sig_incrementProgressBar();
 
-    pLabel->setText("Поиск 'F'...");
-    F = findAxisValue(posFrame, 'F', true);
-    pProgressBar->setValue(4);
-
-    pLabel->setText("Поиск 'G'...");
-    G = findAxisValue(posFrame, 'G', true);
-    pProgressBar->setValue(5);
+    G = findValue(frame, 'G', false);
+    if (G < chekCommandValue) {
+        emit sig_errorCalculate("Ошибка поиска!\n"
+                                "'X' не найден.");
+        return;
+    }
+    emit sig_incrementProgressBar();
 
     qDebug() << "Head = " + QString::number(mHead);
+    qDebug() << "X = " + QString::number(X);
+    qDebug() << "Y = " + QString::number(Y);
+    qDebug() << "Z = " + QString::number(Z);
+    qDebug() << "F = " + QString::number(F);
+    qDebug() << "G = " + QString::number(G);
 
     pLabel->setText("Генерация УП...");
     pOutForm->lwOutClear();
+
     for (int i = 0; i < mHead; ++i) {
-        pOutForm->lwOutAddItem(mListFile[i]);
+        mListFileOut.push_back(mListFile[i]);
     }
-    for (auto it = std::prev(mTypesOfProcessing.cend()); it != std::prev(mTypesOfProcessing.cbegin()); --it) {
-        if (it.key() < posFrame) {
+
+    //for (auto it = std::prev(mTypesOfProcessing.cend()); it != std::prev(mTypesOfProcessing.cbegin()); --it) {
+    for (auto it = mTypesOfProcessing.end(); it != mTypesOfProcessing.begin();) {
+        --it;
+        if (it.key() < frame) {
+            qDebug() << QString::number(it.key());
             QString str = ";(";
-            for (int j = 0; j < it.value().size(); ++j) {
+            for (int j = 0; j < it.value().size() + 13; ++j) {
                 str += "-";
             }
             str += ")";
-            pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + ' ' + str + ' ');
-            pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " ;(" + it.value() + ")");
-            pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + ' ' + str + ' ');
+            mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + ' ' + str + ' ');
+            mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + " ;(Processing - " + it.value() + ") ");
+            mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + ' ' + str + ' ');
 
             break;
         }
     }
-    pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " G" + QString::number(G) + " X" + QString::number(X) + " Y" + QString::number(Y) + " F" + QString::number(F) + ' ');
-    pOutForm->lwOutAddItem('N' + QString::number(pOutForm->getLwOutCount()) + " Z" + QString::number(Z) + ' ');
-    for (int i = posFrame; i < mListFile.size(); ++i) {
-        pOutForm->lwOutAddItem(mListFile[i]);
+
+    if (G != 0) {
+        mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + " G" + QString::number(G) + " X" + QString::number(X) + " Y" + QString::number(Y) + " F" + QString::number(F) + ' ');
+    }
+    else {
+        mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + " G" + QString::number(G) + " X" + QString::number(X) + " Y" + QString::number(Y) + ' ');
+    }
+    mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + " Z" + QString::number(Z) + ' ');
+
+    for (int i = frame; i < mListFile.size(); ++i) {
+        QString str = mListFile[i];
+        if (i == mListFile.size() - 1) {
+            mListFileOut.push_back(str);
+        }
+        else {
+            str = deleteFrameNumber(str);
+            mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + ' ' + str);
+        }
     }
 
-    pProgressBar->setValue(pProgressBar->maximum());
-    ui->statusbar->removeWidget(pLabel);
-    ui->statusbar->removeWidget(pProgressBar);
-    pLabel->close();
-    pProgressBar->close();
+    pOutForm->lwOutAddList(mListFileOut);
 
     pOutForm->show();
+
+    ui->lb_progress->setText("Готово!");
+    ui->progressBar->setValue(ui->progressBar->maximum());
 }
 
-void MainWindow::on_about_triggered() {
+void MainWindow::on_mb_help_about_triggered() {
     pAboutWindow->exec();
 }
+
+void MainWindow::on_mb_file_exit_triggered() {
+    close();
+}
+
 
 void MainWindow::rec_readyReadFile() {
     ui->lb_progress->setText("Обрабатываю файл...");
@@ -254,6 +295,18 @@ void MainWindow::rec_showMessageError(QString error) {
     clearAll();
     setEnabledFileWidgets(true);
     mPathFile.clear();
+    QMessageBox mBox;
+    mBox.setWindowTitle("Ошибка!");
+    mBox.setIcon(QMessageBox::Icon::Critical);
+    mBox.setText(error);
+    mBox.addButton(QMessageBox::Button::Ok);
+    mBox.exec();
+}
+
+void MainWindow::rec_showMessageErrorCalculate(QString error) {
+    pOutForm->close();
+    pOutForm->lwOutClear();
+    mListFileOut.clear();
     QMessageBox mBox;
     mBox.setWindowTitle("Ошибка!");
     mBox.setIcon(QMessageBox::Icon::Critical);
@@ -428,63 +481,52 @@ QString MainWindow::getTool(int i) {
     return "";
 }
 
-int MainWindow::findPosFrame(int frame) {
-    for (int i = 0; i < mListFile[i].size(); ++i) {
-        std::string str = mListFile[i].toStdString();
-        size_t n = str.find('N' + std::to_string(frame));
-
-        if (n != std::string::npos) {
-            return i;
-        }
-    }
-    return 1;
-}
-
-double MainWindow::findAxisValue(int posFrame, QChar axis, bool checkIJK) {
-    for (int i = posFrame; i > 0; --i) {
-        std::string str = mListFile[i].toStdString();
-
-        bool strOK = false;
+double MainWindow::findValue(int startFrame, QChar command, bool checkIJK) {
+    for (int i = startFrame; i > 0; --i) {
+        QString str = mListFile[i];
+        bool strWithoutIJK = false;
         if (checkIJK) {
-            auto itK = std::find(str.begin(), str.end(), 'K');
-            if (itK == str.end()) {
-                auto itJ = std::find(str.begin(), str.end(), 'J');
-                if (itJ == str.end()) {
-                    auto itI = std::find(str.begin(), str.end(), 'I');
-                    if (itI == str.end()) {
-                        strOK = true;
+            qsizetype n = str.indexOf('I');
+            if (n == -1) {
+                n = str.indexOf('J');
+                if (n == -1) {
+                    n = str.indexOf('K');
+                    if (n == -1) {
+                        strWithoutIJK = true;
                     }
                 }
             }
         }
         else {
-            strOK = true;
+            strWithoutIJK = true;
         }
 
-        if (strOK) {
-            auto it = std::find(str.begin(), str.end(), axis);
-            if (it != str.end()) {
-                str.erase(str.begin(), ++it);
+        if (strWithoutIJK) {
+            qsizetype n = str.lastIndexOf(command);
+            if (n != -1) {
+                str = str.mid(n + 1);
 
-                auto itEnd = str.begin();
-                if (*itEnd == '-') {
-                    ++itEnd;
+                int16_t m = 0;
+                if (str[m] == '-') {
+                    ++m;
                 }
-                while (itEnd != str.end() && (std::isdigit(*itEnd) || *itEnd == '.')) {
-                    ++itEnd;
-                }
-                str.erase(itEnd, str.end());
 
-                qDebug() << static_cast<QString>(axis) + " = " + QString::number(std::stod(str));
-                return std::stod(str);
+                while (m < str.size() && (str[m].isDigit() || str[m] == '.')) {
+                    ++m;
+                }
+                str = str.left(m);
+
+                return str.toDouble();
             }
         }
     }
-    return -100000;
+
+    return -999999;
 }
 
 void MainWindow::clearAll() {
     mListFile.clear();
+    mListFileOut.clear();
     mTool = "-";
     mHead = 0;
     mTypesOfProcessing.clear();

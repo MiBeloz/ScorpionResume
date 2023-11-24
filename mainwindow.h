@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QDebug>
+#include <QPixmap>
 #include <QMap>
 #include <QtConcurrent>
 #include <QFileDialog>
@@ -30,6 +31,7 @@ public:
 
 signals:
     void sig_error(QString error);
+    void sig_errorCalculate(QString error);
     void sig_warning(QString caution);
     void sig_emptyFile();
     void sig_readyReadFile();
@@ -40,10 +42,12 @@ private slots:
     void on_pb_findFile_clicked();
     void on_pb_loadFile_clicked();
     void on_pb_calculate_clicked();
-    void on_about_triggered();
+    void on_mb_help_about_triggered();
+    void on_mb_file_exit_triggered();
     void rec_readyReadFile();
     void rec_processingReady(bool result);
     void rec_showMessageError(QString error);
+    void rec_showMessageErrorCalculate(QString error);
     void rec_warning(QString caution);
     void rec_showMessageEmptyFile();
 
@@ -54,9 +58,10 @@ private:
 
     QString mPathFile;
     QStringList mListFile;
+    QStringList mListFileOut;
     QString mTool;
     int16_t mHead = 0;
-    QMap<int16_t, QString> mTypesOfProcessing;
+    QMap<size_t, QString> mTypesOfProcessing;
     size_t mCountOfFrames = 0;
     int mFlag = 0;
 
@@ -81,7 +86,7 @@ private:
     bool setTool();
     QString getTool(int i);
     int findPosFrame(int frame);
-    double findAxisValue(int posFrame, QChar axis, bool checkIJK);
+    double findValue(int posFrame, QChar axis, bool checkIJK);
     void clearAll();
     QString deleteFrameNumber(QString str);
 };

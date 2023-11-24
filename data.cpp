@@ -1,5 +1,9 @@
 #include "data.h"
 
+QString versionMajor = "2";
+QString versionMinor = "0";
+QString versionMicro = "0";
+
 QString gDir {"G:/"};
 bool gUTF8 {false};
 

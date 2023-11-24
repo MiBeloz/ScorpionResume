@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
-cmake_minimum_required(VERSION 3.5)
-
 set(PROJ_NAME ScorpionResume)
+
 project(${PROJ_NAME} VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -31,6 +30,8 @@ set(PROJECT_SOURCES
     about.cpp
     about.h
     about.ui
+    images.qrc
+    resources.rc
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

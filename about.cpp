@@ -7,13 +7,17 @@ About::About(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    ui->lb_text->setText("Scorpion Resume\n"
-                         "Версия " + QString::number(SCORPION_RESUME_VERSION_MAJOR) + '.' + QString::number(SCORPION_RESUME_VERSION_MINOR) + "\n\n" +
-                         "Белозеров Михаил\n"
-                         "2023\n"
+    QPixmap pixmap(":/picture.png");
+    pixmap = pixmap.scaled(128, 128);
+    ui->lb_ico->setPixmap(pixmap);
+
+    ui->lb_text->setText("\tScorpion Resume\n"
+                         "\tВерсия " + versionMajor + '.' + versionMinor + "." + versionMicro + "\n\n" +
+                         "\tБелозеров Михаил\n"
+                         "\t2023\n"
                          "\n"
-                         "Предназначена для возобновления программ\n"
-                         "станка 'Scorpion' с определенного кадра.");
+                         "\tПредназначена для возобновления программ\n"
+                         "\tстанка 'Scorpion' с определенного кадра.");
 }
 
 About::~About()

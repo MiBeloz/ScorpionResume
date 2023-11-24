@@ -18,9 +18,9 @@ void OutForm::lwOutClear()
     ui->lw_out->clear();
 }
 
-void OutForm::lwOutAddItem(QString item)
+void OutForm::lwOutAddList(QStringList strList)
 {
-    ui->lw_out->addItem(item);
+    ui->lw_out->addItems(strList);
 }
 
 int OutForm::getLwOutCount()

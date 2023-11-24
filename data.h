@@ -4,6 +4,10 @@
 #include <QString>
 #include <QMap>
 
+extern QString versionMajor;
+extern QString versionMinor;
+extern QString versionMicro;
+
 extern QString gDir;
 extern bool gUTF8;
 

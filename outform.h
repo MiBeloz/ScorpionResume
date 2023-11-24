@@ -20,7 +20,7 @@ public:
     ~OutForm();
 
     void lwOutClear();
-    void lwOutAddItem(QString item);
+    void lwOutAddList(QStringList item);
     int getLwOutCount();
 
 private slots:

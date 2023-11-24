@@ -3,8 +3,7 @@
 
 #include <QDialog>
 
-#define SCORPION_RESUME_VERSION_MAJOR 0
-#define SCORPION_RESUME_VERSION_MINOR 1
+#include "data.h"
 
 namespace Ui {
 class About;
