@@ -25,6 +25,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     QObject::connect(this, &MainWindow::sig_readyReadFile, this, &MainWindow::rec_readyReadFile);
     QObject::connect(&ftrWtchTypeOfProcessingReady, &QFutureWatcher<bool>::finished, this, [&](){ rec_processingReady(ftrTypeOfProcessingReady.result()); });
     QObject::connect(&ftrWtchSetToolReady, &QFutureWatcher<bool>::finished, this, [&](){ rec_processingReady(ftrSetToolReady.result()); });
+    QObject::connect(ui->spB_findFrame, &QSpinBox::textChanged, this, [&](){
+        ui->statusbar->showMessage("Значение от " + QString::number(ui->spB_findFrame->minimum()) + " до " + QString::number(ui->spB_findFrame->maximum()));
+    });
+    QObject::connect(ui->spB_stopFrame, &QSpinBox::textChanged, this, [&](){
+        ui->statusbar->showMessage("Значение от " + QString::number(ui->spB_stopFrame->minimum()) + " до " + QString::number(ui->spB_stopFrame->maximum()));
+    });
+    QObject::connect(ui->spB_findFrame, &QSpinBox::editingFinished, this, [&](){
+        ui->statusbar->clearMessage();
+    });
+    QObject::connect(ui->spB_stopFrame, &QSpinBox::editingFinished, this, [&](){
+        ui->statusbar->clearMessage();
+    });
 }
 
 MainWindow::~MainWindow() {
@@ -276,6 +288,7 @@ void MainWindow::rec_processingReady(bool result) {
             ui->spB_stopFrame->setValue(20);
             ui->spB_findFrame->setRange(1, mCountOfFrames);
             ui->spB_findFrame->setValue(1);
+            ui->statusbar->clearMessage();
         }
         else {
             ui->spB_stopFrame->setEnabled(false);

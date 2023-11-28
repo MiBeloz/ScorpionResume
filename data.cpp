@@ -2,7 +2,7 @@
 
 QString versionMajor = "2";
 QString versionMinor = "1";
-QString versionMicro = "2";
+QString versionMicro = "3";
 
 QString gDir {"G:/"};
 bool gUTF8 {false};
