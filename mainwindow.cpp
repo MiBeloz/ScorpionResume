@@ -142,7 +142,6 @@ void MainWindow::on_pb_calculate_clicked() {
         mListFileOut.push_back(mListFile[i]);
     }
 
-    //for (auto it = std::prev(mTypesOfProcessing.cend()); it != std::prev(mTypesOfProcessing.cbegin()); --it) {
     for (auto it = mTypesOfProcessing.end(); it != mTypesOfProcessing.begin();) {
         --it;
         if (it.key() < frame) {
@@ -161,10 +160,10 @@ void MainWindow::on_pb_calculate_clicked() {
     }
 
     if (G != 0) {
-        mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + " G" + QString::number(G) + " X" + QString::number(X) + " Y" + QString::number(Y) + " F" + QString::number(F) + ' ');
+        mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + " G1 " + "X" + QString::number(X) + " Y" + QString::number(Y) + " F" + QString::number(F) + ' ');
     }
     else {
-        mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + " G" + QString::number(G) + " X" + QString::number(X) + " Y" + QString::number(Y) + ' ');
+        mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + " G0 " + "X" + QString::number(X) + " Y" + QString::number(Y) + ' ');
     }
     mListFileOut.push_back('N' + QString::number(mListFileOut.size()) + " Z" + QString::number(Z) + ' ');
 
@@ -188,6 +187,7 @@ void MainWindow::on_pb_calculate_clicked() {
 }
 
 void MainWindow::on_pb_fundFrame_clicked() {
+    ui->lw_file->setCurrentRow(0, QItemSelectionModel::SelectionFlag::SelectCurrent);
     ui->lw_file->setCurrentRow(ui->spB_findFrame->value(), QItemSelectionModel::SelectionFlag::SelectCurrent);
 }
 
@@ -274,7 +274,7 @@ void MainWindow::rec_processingReady(bool result) {
         if (mCountOfFrames - 2 >= 28) {
             ui->spB_stopFrame->setRange(20, mCountOfFrames - 2);
             ui->spB_stopFrame->setValue(20);
-            ui->spB_findFrame->setRange(1, mCountOfFrames - 2);
+            ui->spB_findFrame->setRange(1, mCountOfFrames);
             ui->spB_findFrame->setValue(1);
         }
         else {

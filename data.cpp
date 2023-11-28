@@ -2,12 +2,15 @@
 
 QString versionMajor = "2";
 QString versionMinor = "1";
-QString versionMicro = "0";
+QString versionMicro = "2";
 
 QString gDir {"G:/"};
 bool gUTF8 {false};
 
 QMap<QString, QString> dictionary {
+    { "HSM-AREA-CLEARANCE", "(Ч)Контурная черновая" },
+    { "HSM-RASTER-CLEARANCE", "(Ч)Растровая" },
+    { "HSM-REST-ROUGHING", "(Ч)Черновая доработка" },
     { "HSM-BOUNDARY", "По границам" },
     { "HSM-COMBINE-CONST-Z-CONST-STEP", "Комплексная по ватерлиниям\n\tи с постоянным шагом" },
     { "HSM-COMBINE-CONST-Z-CORNER-OFFSET", "Комплексная по ватерлиниям\n\tи эквидистантный отступ" },
