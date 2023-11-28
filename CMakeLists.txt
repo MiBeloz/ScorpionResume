@@ -32,6 +32,8 @@ set(PROJECT_SOURCES
     about.ui
     images.qrc
     resources.rc
+    myspinbox.cpp
+    myspinbox.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

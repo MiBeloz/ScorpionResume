@@ -25,10 +25,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     QObject::connect(this, &MainWindow::sig_readyReadFile, this, &MainWindow::rec_readyReadFile);
     QObject::connect(&ftrWtchTypeOfProcessingReady, &QFutureWatcher<bool>::finished, this, [&](){ rec_processingReady(ftrTypeOfProcessingReady.result()); });
     QObject::connect(&ftrWtchSetToolReady, &QFutureWatcher<bool>::finished, this, [&](){ rec_processingReady(ftrSetToolReady.result()); });
-    QObject::connect(ui->spB_findFrame, &QSpinBox::textChanged, this, [&](){
+    QObject::connect(ui->spB_findFrame, &MySpinBox::sig_inFocus, this, [&](){
         ui->statusbar->showMessage("Значение от " + QString::number(ui->spB_findFrame->minimum()) + " до " + QString::number(ui->spB_findFrame->maximum()));
     });
-    QObject::connect(ui->spB_stopFrame, &QSpinBox::textChanged, this, [&](){
+    QObject::connect(ui->spB_stopFrame, &MySpinBox::sig_inFocus, this, [&](){
         ui->statusbar->showMessage("Значение от " + QString::number(ui->spB_stopFrame->minimum()) + " до " + QString::number(ui->spB_stopFrame->maximum()));
     });
     QObject::connect(ui->spB_findFrame, &QSpinBox::editingFinished, this, [&](){

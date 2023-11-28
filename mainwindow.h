@@ -16,6 +16,7 @@
 #include "data.h"
 #include "outform.h"
 #include "about.h"
+#include "myspinbox.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
