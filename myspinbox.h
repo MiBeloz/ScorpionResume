@@ -4,18 +4,19 @@
 #include <QObject>
 #include <QSpinBox>
 #include <QFocusEvent>
-#include <QDebug>
+#include <QKeyEvent>
 
-class MySpinBox : public QSpinBox
-{
+class MySpinBox : public QSpinBox {
     Q_OBJECT
 public:
-    MySpinBox(QSpinBox *spB);
-
-    void focusInEvent(QFocusEvent* e);
+    MySpinBox(QSpinBox*);
+    void focusInEvent(QFocusEvent* event);
+    void keyPressEvent(QKeyEvent *event);
 
 signals:
     void sig_inFocus();
+    void sig_enterPress();
+
 };
 
 #endif // MYSPINBOX_H

@@ -37,6 +37,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     QObject::connect(ui->spB_stopFrame, &QSpinBox::editingFinished, this, [&](){
         ui->statusbar->clearMessage();
     });
+    QObject::connect(ui->spB_findFrame, &MySpinBox::sig_enterPress, this, &MainWindow::on_pb_findFrame_clicked);
+    QObject::connect(ui->spB_stopFrame, &MySpinBox::sig_enterPress, this, &MainWindow::on_pb_calculate_clicked);
 }
 
 MainWindow::~MainWindow() {
@@ -198,9 +200,11 @@ void MainWindow::on_pb_calculate_clicked() {
     ui->progressBar->setValue(ui->progressBar->maximum());
 }
 
-void MainWindow::on_pb_fundFrame_clicked() {
-    ui->lw_file->setCurrentRow(0, QItemSelectionModel::SelectionFlag::SelectCurrent);
-    ui->lw_file->setCurrentRow(ui->spB_findFrame->value(), QItemSelectionModel::SelectionFlag::SelectCurrent);
+void MainWindow::on_pb_findFrame_clicked() {
+    //ui->lw_file->setCurrentRow(0, QItemSelectionModel::SelectionFlag::SelectCurrent);
+    ui->lw_file->setCurrentItem(ui->lw_file->item(ui->spB_findFrame->value()), QItemSelectionModel::SelectionFlag::Select);
+    ui->lw_file->scrollToItem(ui->lw_file->item(ui->spB_findFrame->value()), QAbstractItemView::ScrollHint::PositionAtCenter);
+    ui->lw_file->setFocus();
 }
 
 void MainWindow::on_mb_help_about_triggered() {
