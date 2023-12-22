@@ -8,34 +8,28 @@ OutForm::OutForm(QWidget *parent) :
     ui->setupUi(this);
 }
 
-OutForm::~OutForm()
-{
+OutForm::~OutForm() {
     delete ui;
 }
 
-void OutForm::lwOutClear()
-{
+void OutForm::lwOutClear() {
     ui->lw_out->clear();
 }
 
-void OutForm::lwOutAddList(QStringList strList)
-{
+void OutForm::lwOutAddList(QStringList strList) {
     ui->lw_out->addItems(strList);
 }
 
-int OutForm::getLwOutCount()
-{
+int OutForm::getLwOutCount() {
     return ui->lw_out->count();
 }
 
-void OutForm::on_pb_close_clicked()
-{
+void OutForm::on_pb_close_clicked() {
     close();
 }
 
-void OutForm::on_pb_save_clicked()
-{
-    QString path = QFileDialog::getSaveFileName(this, tr("Сохранить"), gDir, tr("MPF файлы (*.MPF)"));
+void OutForm::on_pb_save_clicked() {
+    QString path = QFileDialog::getSaveFileName(this, tr("Сохранить"), tr("%1").arg(GlobalVariables::homeDirOpenFile), tr("%1").arg(GlobalVariables::defaultFileFormat + " файлы (*." + GlobalVariables::defaultFileFormat + ")"));
 
     QFile out(path);
     if(!out.open(QIODevice::WriteOnly | QIODevice::Text)) {

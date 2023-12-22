@@ -8,15 +8,16 @@
 
 class MySpinBox : public QSpinBox {
     Q_OBJECT
+
 public:
     MySpinBox(QSpinBox*);
+
     void focusInEvent(QFocusEvent* event);
     void keyPressEvent(QKeyEvent *event);
 
 signals:
     void sig_inFocus();
     void sig_enterPress();
-
 };
 
 #endif // MYSPINBOX_H

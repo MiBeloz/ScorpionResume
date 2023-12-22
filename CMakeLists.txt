@@ -21,6 +21,8 @@ set(PROJECT_SOURCES
     main.cpp
     data.cpp
     data.h
+    selectedfile.cpp
+    selectedfile.h
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
@@ -30,6 +32,8 @@ set(PROJECT_SOURCES
     about.cpp
     about.h
     about.ui
+    dictionary.cpp
+    dictionary.h
     images.qrc
     resources.rc
     myspinbox.cpp

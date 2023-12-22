@@ -9,21 +9,19 @@
 #include <QtConcurrent>
 #include <QFileDialog>
 #include <QString>
-#include <QFile>
-#include <QLabel>
-#include <QProgressBar>
 
 #include "data.h"
+#include "selectedfile.h"
 #include "outform.h"
 #include "about.h"
 #include "myspinbox.h"
+#include "dictionary.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
@@ -55,10 +53,11 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    SelectedFile *pSelectedFile;
     OutForm *pOutForm;
     About *pAboutWindow;
+    Dictionary *pDictionary;
 
-    QString mPathFile;
     QStringList mListFile;
     QStringList mListFileOut;
     QString mTool;

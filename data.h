@@ -2,15 +2,34 @@
 #define DATA_H
 
 #include <QString>
-#include <QMap>
+#include <QVector>
 
-extern QString versionMajor;
-extern QString versionMinor;
-extern QString versionMicro;
+namespace ApplicationVersion {
+    extern QString versionMajor;
+    extern QString versionMinor;
+    extern QString versionMicro;
+}
 
-extern QString gDir;
-extern bool gUTF8;
+namespace AboutDescription {
+    extern QString description;
+}
 
-extern QMap<QString, QString> dictionary;
+namespace GlobalVariables {
+    extern QString homeDirOpenFile;
+    extern bool isUTF8Encoding;
+    extern QString defaultFileFormat;
+}
+
+namespace ProgressLoadingFile {
+    enum OperationName {
+        readingFile                 = 0,
+        processingFile,
+        searchingTypesOfProcessing,
+        searchingUsedTools,
+        finish
+    };
+
+    extern QVector<QString> progressName;
+}
 
 #endif // DATA_H

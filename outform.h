@@ -7,12 +7,9 @@
 
 #include "data.h"
 
-namespace Ui {
-class OutForm;
-}
+namespace Ui { class OutForm; }
 
-class OutForm : public QDialog
-{
+class OutForm : public QDialog {
     Q_OBJECT
 
 public:
@@ -25,7 +22,6 @@ public:
 
 private slots:
     void on_pb_close_clicked();
-
     void on_pb_save_clicked();
 
 private:

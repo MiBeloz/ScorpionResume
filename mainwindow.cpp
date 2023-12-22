@@ -3,8 +3,10 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
+    pSelectedFile = new SelectedFile(this);
     pOutForm = new OutForm(this);
     pAboutWindow = new About(this);
+    pDictionary = new Dictionary(this, Dictionary::Language::russian);
     QPixmap pixmap(":/picture.png");
     setWindowIcon(pixmap);
 
@@ -46,8 +48,8 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::on_pb_findFile_clicked() {
-    ui->le_pathFile->setText(QFileDialog::getOpenFileName(this, tr("Открыть"), gDir, tr("MPF файлы (*.MPF)")));
-    if (mPathFile != ui->le_pathFile->text()) {
+    ui->le_pathFile->setText(QFileDialog::getOpenFileName(this, tr("%1").arg(pDictionary->getString(Dictionary::DictionaryString::open)), tr("%1").arg(GlobalVariables::homeDirOpenFile), tr("%1").arg(GlobalVariables::defaultFileFormat + " файлы (*." + GlobalVariables::defaultFileFormat + ")")));
+    if (pSelectedFile->getPathFile() != ui->le_pathFile->text()) {
         clearAll();
         setEnabledWidgets(false);
         ui->pb_loadFile->setEnabled(true);
@@ -60,17 +62,17 @@ void MainWindow::on_pb_loadFile_clicked() {
     ui->progressBar->setValue(0);
     setEnabledFileWidgets(false);
 
-    ui->lb_progress->setText("Читаю файл...");
+    ui->lb_progress->setText(ProgressLoadingFile::progressName[ProgressLoadingFile::readingFile]);
     static_cast<void>(QtConcurrent::run([&](){
-        mPathFile = ui->le_pathFile->text();
-        QFile fileIn(mPathFile);
+        pSelectedFile->setPathFile(ui->le_pathFile->text());
+        QFile fileIn(pSelectedFile->getPathFile());
         if (!fileIn.open(QIODevice::ReadOnly | QIODevice::Text)) {
             emit sig_error("Ошибка открытия файла!");
             return;
         }
 
         while (!fileIn.atEnd()) {
-            if (gUTF8) {    // Если текст в локальной 8-бит кодировке (windows-1251);
+            if (GlobalVariables::isUTF8Encoding) {    // Если текст в локальной 8-бит кодировке (windows-1251);
                 mListFile.append(QString::fromUtf8(fileIn.readLine()));
             }
             else {          // Если текст в UTF-8
@@ -311,7 +313,7 @@ void MainWindow::rec_processingReady(bool result) {
 void MainWindow::rec_showMessageError(QString error) {
     clearAll();
     setEnabledFileWidgets(true);
-    mPathFile.clear();
+    pSelectedFile->clear();
     QMessageBox mBox;
     mBox.setWindowTitle("Ошибка!");
     mBox.setIcon(QMessageBox::Icon::Critical);
@@ -368,13 +370,7 @@ bool MainWindow::setTypeOfProcessing() {
         }
         QString typeOfProcessing = getTypeOfProcessing(strOfProcessing);
         QString frameOfProcessing = getFrameOfProcessing(strOfProcessing);
-        auto it = dictionary.find(typeOfProcessing);
-        if (it != dictionary.end()) {
-            ui->lw_typeOfProcessing->addItem(frameOfProcessing + "\t" + *it);
-        }
-        else {
-            ui->lw_typeOfProcessing->addItem(frameOfProcessing + "\t" + typeOfProcessing);
-        }
+        ui->lw_typeOfProcessing->addItem(frameOfProcessing + "\t" + pDictionary->translateTypeOfProcessing(typeOfProcessing));
         mTypesOfProcessing[i] = typeOfProcessing;
 
         if (ui->lw_typeOfProcessing->count() > 0 && !findHead) {

@@ -11,21 +11,13 @@ About::About(QWidget *parent) :
     pixmap = pixmap.scaled(128, 128);
     ui->lb_ico->setPixmap(pixmap);
 
-    ui->lb_text->setText("\tScorpion Resume\n"
-                         "\tВерсия " + versionMajor + '.' + versionMinor + "." + versionMicro + "\n\n" +
-                         "\tБелозеров Михаил\n"
-                         "\t2023\n"
-                         "\n"
-                         "\tПредназначена для возобновления программ\n"
-                         "\tстанка 'Scorpion' с определенного кадра.");
+    ui->lb_text->setText(AboutDescription::description);
 }
 
-About::~About()
-{
+About::~About() {
     delete ui;
 }
 
-void About::on_pushButton_clicked()
-{
+void About::on_pushButton_clicked() {
     close();
 }
