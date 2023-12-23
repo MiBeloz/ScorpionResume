@@ -12,6 +12,7 @@
 
 #include "data.h"
 #include "selectedfile.h"
+#include "programcode.h"
 #include "outform.h"
 #include "about.h"
 #include "myspinbox.h"
@@ -25,12 +26,12 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 signals:
-    void sig_error(QString error);
-    void sig_errorCalculate(QString error);
+    void sig_error(Errors::Error);
+    void sig_errorFindValue(Errors::Error);
     void sig_warning(QString caution);
     void sig_emptyFile();
     void sig_readyReadFile();
@@ -46,17 +47,19 @@ private slots:
     void on_mb_file_exit_triggered();
     void rec_readyReadFile();
     void rec_processingReady(bool result);
-    void rec_showMessageError(QString error);
-    void rec_showMessageErrorCalculate(QString error);
+    void rec_showMessageError(Errors::Error er);
+    void rec_showMessageErrorFindValue(Errors::Error er);
     void rec_warning(QString caution);
     void rec_showMessageEmptyFile();
 
 private:
     Ui::MainWindow *ui;
+    Dictionary *pDictionary;
     SelectedFile *pSelectedFile;
+    ProgramCode *pProgramCode;
     OutForm *pOutForm;
     About *pAboutWindow;
-    Dictionary *pDictionary;
+
 
     QStringList mListFile;
     QStringList mListFileOut;

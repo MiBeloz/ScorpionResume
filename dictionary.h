@@ -14,15 +14,11 @@ public:
         russian
     };
 
-    enum DictionaryString {
-        open = 0
-    };
-
-    Dictionary(QObject *parent = nullptr, Language language = Language::russian);
+    explicit Dictionary(QObject *parent = nullptr, Language language = Language::russian);
 
     void setLanguage(Language language);
     QString getLanguageName();
-    QString getString(DictionaryString dStr);
+    QString translateString(QString source);
     QString translateTypeOfProcessing(QString source);
 
 private:
@@ -32,12 +28,18 @@ private:
         "Русский"
     };
 
-    const QVector<QMap<DictionaryString, QString>> m_dictionaryString {
+    const QVector<QMap<QString, QString>> m_dictionaryString {
         {
-            { DictionaryString::open, "Open" }
+            { "Open", "Open" },
+            { "Save", "Save" },
+            { "files", "files" },
+            { "Error!", "Error!" }
         },
         {
-            { DictionaryString::open, "Открыть" }
+            { "Open", "Открыть" },
+            { "Save", "Сохранить" },
+            { "files", "файлы" },
+            { "Error!", "Ошибка!" }
         }
     };
 

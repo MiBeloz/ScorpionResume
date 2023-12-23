@@ -10,7 +10,7 @@ class MySpinBox : public QSpinBox {
     Q_OBJECT
 
 public:
-    MySpinBox(QSpinBox*);
+    explicit MySpinBox(QSpinBox*);
 
     void focusInEvent(QFocusEvent* event);
     void keyPressEvent(QKeyEvent *event);

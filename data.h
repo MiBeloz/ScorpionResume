@@ -5,13 +5,13 @@
 #include <QVector>
 
 namespace ApplicationVersion {
-    extern QString versionMajor;
-    extern QString versionMinor;
-    extern QString versionMicro;
+    extern const QString versionMajor;
+    extern const QString versionMinor;
+    extern const QString versionMicro;
 }
 
 namespace AboutDescription {
-    extern QString description;
+    extern const QString description;
 }
 
 namespace GlobalVariables {
@@ -29,7 +29,33 @@ namespace ProgressLoadingFile {
         finish
     };
 
-    extern QVector<QString> progressName;
+    extern const QVector<QString> progressOperationName;
+}
+
+namespace Errors {
+    enum Error {
+        erOpen      = 0,
+        erNoTypeOfProcessing,
+        erIncorrectHead,
+        erOneMoreTool,
+        erNoTool,
+        erIncorrectNumeration,
+        erEndProgram,
+        erFindX,
+        erFindY,
+        erFindZ,
+        erFindF,
+        erFindG
+    };
+
+    extern const QString error;
+    extern const QVector<QString> errorDescription;
+}
+
+namespace FileOperations {
+    extern const QString open;
+    extern const QString save;
+    extern const QString files;
 }
 
 #endif // DATA_H

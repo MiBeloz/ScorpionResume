@@ -6,6 +6,7 @@
 #include <QTextStream>
 
 #include "data.h"
+#include "dictionary.h"
 
 namespace Ui { class OutForm; }
 
@@ -26,6 +27,7 @@ private slots:
 
 private:
     Ui::OutForm *ui;
+    Dictionary *pDictionary;
 };
 
 #endif // OUTFORM_H

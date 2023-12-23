@@ -3,10 +3,11 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
+    pDictionary = new Dictionary(this, Dictionary::Language::english);
     pSelectedFile = new SelectedFile(this);
+    pProgramCode = new ProgramCode(this);
     pOutForm = new OutForm(this);
     pAboutWindow = new About(this);
-    pDictionary = new Dictionary(this, Dictionary::Language::russian);
     QPixmap pixmap(":/picture.png");
     setWindowIcon(pixmap);
 
@@ -15,12 +16,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     setEnabledWidgets(false);
 
     QObject::connect(ui->le_pathFile, &QLineEdit::textChanged, this, [&]{
-        QFile file(ui->le_pathFile->text());
-        file.exists() ? ui->pb_loadFile->setEnabled(true) : ui->pb_loadFile->setEnabled(false); });
+        pSelectedFile->exists(ui->le_pathFile->text()) ? ui->pb_loadFile->setEnabled(true) : ui->pb_loadFile->setEnabled(false); });
 
     QObject::connect(ui->pb_clear, &QPushButton::clicked, this, &MainWindow::clearAll);
     QObject::connect(this, &MainWindow::sig_error, this, &MainWindow::rec_showMessageError);
-    QObject::connect(this, &MainWindow::sig_errorCalculate, this, &MainWindow::rec_showMessageErrorCalculate);
+    QObject::connect(pSelectedFile, &SelectedFile::sig_readError, this, &MainWindow::rec_showMessageError);
+    QObject::connect(this, &MainWindow::sig_errorFindValue, this, &MainWindow::rec_showMessageErrorFindValue);
     QObject::connect(this, &MainWindow::sig_warning, this, &MainWindow::rec_warning);
     QObject::connect(this, &MainWindow::sig_emptyFile, this, &MainWindow::rec_showMessageEmptyFile);
     QObject::connect(this, &MainWindow::sig_incrementProgressBar, this, [&]{ ui->progressBar->setValue(ui->progressBar->value() + 1); });
@@ -48,45 +49,33 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::on_pb_findFile_clicked() {
-    ui->le_pathFile->setText(QFileDialog::getOpenFileName(this, tr("%1").arg(pDictionary->getString(Dictionary::DictionaryString::open)), tr("%1").arg(GlobalVariables::homeDirOpenFile), tr("%1").arg(GlobalVariables::defaultFileFormat + " файлы (*." + GlobalVariables::defaultFileFormat + ")")));
-    if (pSelectedFile->getPathFile() != ui->le_pathFile->text()) {
-        clearAll();
-        setEnabledWidgets(false);
+    ui->le_pathFile->setText(QFileDialog::getOpenFileName(this,
+                                                          tr("%1").arg(pDictionary->translateString(FileOperations::open)),
+                                                          tr("%1").arg(GlobalVariables::homeDirOpenFile),
+                                                          tr("%1 %2 (*.%1)").arg(GlobalVariables::defaultFileFormat, pDictionary->translateString(FileOperations::files))));
+
+    if (pSelectedFile->getFileName() != ui->le_pathFile->text()) {
         ui->pb_loadFile->setEnabled(true);
+        clearAll();
     }
 }
 
 void MainWindow::on_pb_loadFile_clicked() {
     clearAll();
-    ui->progressBar->setRange(0, 5);
-    ui->progressBar->setValue(0);
-    setEnabledFileWidgets(false);
+    ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::readingFile]);
 
-    ui->lb_progress->setText(ProgressLoadingFile::progressName[ProgressLoadingFile::readingFile]);
     static_cast<void>(QtConcurrent::run([&](){
-        pSelectedFile->setPathFile(ui->le_pathFile->text());
-        QFile fileIn(pSelectedFile->getPathFile());
-        if (!fileIn.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            emit sig_error("Ошибка открытия файла!");
-            return;
-        }
+        pSelectedFile->setFileName(ui->le_pathFile->text());
+        *pProgramCode = pSelectedFile->read();
 
-        while (!fileIn.atEnd()) {
-            if (GlobalVariables::isUTF8Encoding) {    // Если текст в локальной 8-бит кодировке (windows-1251);
-                mListFile.append(QString::fromUtf8(fileIn.readLine()));
-            }
-            else {          // Если текст в UTF-8
-                mListFile.append(QString::fromLocal8Bit(fileIn.readLine()));
-            }
-        }
-        fileIn.close();
+        pProgramCode->toQStringList(mListFile);
 
-        if (mListFile.size() > 0) {
-            emit sig_readyReadFile();
-        }
-        else {
+        if (pProgramCode->isEmpty()) {
             setEnabledFileWidgets(true);
             emit sig_emptyFile();
+        }
+        else {
+            emit sig_readyReadFile();
         }
     }));
 }
@@ -106,40 +95,35 @@ void MainWindow::on_pb_calculate_clicked() {
     ui->lb_progress->setText("Ищу X, Y, Z, F, G...");
     X = findValue(frame, 'X', true);
     if (X < chekCommandValue) {
-        emit sig_errorCalculate("Ошибка поиска!\n"
-                                "'X' не найден.");
+        emit sig_errorFindValue(Errors::erFindX);
         return;
     }
     emit sig_incrementProgressBar();
 
     Y = findValue(frame, 'Y', true);
     if (Y < chekCommandValue) {
-        emit sig_errorCalculate("Ошибка поиска!\n"
-                                "'Y' не найден.");
+        emit sig_errorFindValue(Errors::erFindY);
         return;
     }
     emit sig_incrementProgressBar();
 
     Z = findValue(frame, 'Z', false);
     if (Z < chekCommandValue) {
-        emit sig_errorCalculate("Ошибка поиска!\n"
-                                "'Z' не найден.");
+        emit sig_errorFindValue(Errors::erFindZ);
         return;
     }
     emit sig_incrementProgressBar();
 
     F = findValue(frame, 'F', false);
     if (F < chekCommandValue) {
-        emit sig_errorCalculate("Ошибка поиска!\n"
-                                "'X' не найден.");
+        emit sig_errorFindValue(Errors::erFindF);
         return;
     }
     emit sig_incrementProgressBar();
 
     G = findValue(frame, 'G', false);
     if (G < chekCommandValue) {
-        emit sig_errorCalculate("Ошибка поиска!\n"
-                                "'X' не найден.");
+        emit sig_errorFindValue(Errors::erFindG);
         return;
     }
     emit sig_incrementProgressBar();
@@ -219,8 +203,8 @@ void MainWindow::on_mb_file_exit_triggered() {
 
 
 void MainWindow::rec_readyReadFile() {
-    ui->lb_progress->setText("Обрабатываю файл...");
     emit sig_incrementProgressBar();
+    ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::processingFile]);
 
     for (int i = 0; i < mListFile.size(); ++i) {
         if (!mListFile[i].isEmpty()) {
@@ -245,8 +229,7 @@ void MainWindow::rec_readyReadFile() {
                 std::string str = mListFile[i].toStdString();
                 size_t n = str.find('N' + std::to_string(i) + ' ');
                 if (n == std::string::npos) {
-                    emit sig_error("Файл программы поврежден!\n"
-                                   "Некорректная нумерация строк.");
+                    emit sig_error(Errors::erIncorrectNumeration);
                     return;
                 }
             }
@@ -262,8 +245,7 @@ void MainWindow::rec_readyReadFile() {
                 break;
             }
             else {
-                emit sig_error("Файл программы поврежден!\n"
-                               "Неожиданный конец программы.");
+                emit sig_error(Errors::erEndProgram);
                 return;
             }
         }
@@ -310,26 +292,26 @@ void MainWindow::rec_processingReady(bool result) {
     }
 }
 
-void MainWindow::rec_showMessageError(QString error) {
+void MainWindow::rec_showMessageError(Errors::Error er) {
     clearAll();
     setEnabledFileWidgets(true);
     pSelectedFile->clear();
     QMessageBox mBox;
-    mBox.setWindowTitle("Ошибка!");
+    mBox.setWindowTitle(tr("%1").arg(pDictionary->translateString(Errors::error)));
     mBox.setIcon(QMessageBox::Icon::Critical);
-    mBox.setText(error);
+    mBox.setText(tr("%1").arg(pDictionary->translateString(Errors::errorDescription[er])));
     mBox.addButton(QMessageBox::Button::Ok);
     mBox.exec();
 }
 
-void MainWindow::rec_showMessageErrorCalculate(QString error) {
+void MainWindow::rec_showMessageErrorFindValue(Errors::Error er) {
     pOutForm->close();
     pOutForm->lwOutClear();
     mListFileOut.clear();
     QMessageBox mBox;
-    mBox.setWindowTitle("Ошибка!");
+    mBox.setWindowTitle(tr("%1").arg(pDictionary->translateString(Errors::error)));
     mBox.setIcon(QMessageBox::Icon::Critical);
-    mBox.setText(error);
+    mBox.setText(tr("%1").arg(pDictionary->translateString(Errors::errorDescription[er])));
     mBox.addButton(QMessageBox::Button::Ok);
     mBox.exec();
 }
@@ -380,14 +362,12 @@ bool MainWindow::setTypeOfProcessing() {
     }
 
     if (mTypesOfProcessing.isEmpty()) {
-        emit sig_error("Программа повреждена!\n"
-                       "Не найдено ни одного вида обработки.");
+        emit sig_error(Errors::erNoTypeOfProcessing);
         return false;
     }
 
     if (mHead < 12 || mHead > 12) {
-        emit sig_error("Файл программы поврежден!\n"
-                       "Некорректная шапка программы.");
+        emit sig_error(Errors::erIncorrectHead);
         return false;
     }
 
@@ -461,16 +441,14 @@ bool MainWindow::setTool() {
                                  "для одного инструмента.");
             }
             else {
-                emit sig_error("Обаботка программы невозможна!\n"
-                               "В программе используется более одного инструмента.");
+                emit sig_error(Errors::erOneMoreTool);
                 return false;
             }
         }
     }
 
     if (!toolFinded) {
-        emit sig_error("Программа повреждена!\n"
-                       "Не найдено ни одного инструмента.");
+        emit sig_error(Errors::erNoTool);
         return false;
     }
 
@@ -552,11 +530,13 @@ void MainWindow::clearAll() {
     ui->lb_countOfFrames->setText("-");
     ui->lb_progress->setText("-");
     ui->spB_stopFrame->setValue(0);
-    ui->progressBar->setValue(0);
     ui->spB_stopFrame->setRange(0, 0);
     ui->spB_stopFrame->setValue(0);
     ui->spB_findFrame->setRange(0, 0);
     ui->spB_findFrame->setValue(0);
+    ui->progressBar->setRange(0, ProgressLoadingFile::progressOperationName.size());
+    ui->progressBar->setValue(0);
+
     setEnabledWidgets(false);
 }
 
