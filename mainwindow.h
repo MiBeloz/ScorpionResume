@@ -41,11 +41,11 @@ signals:
 private slots:
     void on_pb_findFile_clicked();
     void on_pb_loadFile_clicked();
+    void rec_readyReadFile();
     void on_pb_calculate_clicked();
     void on_pb_findFrame_clicked();
     void on_mb_help_about_triggered();
     void on_mb_file_exit_triggered();
-    void rec_readyReadFile();
     void rec_processingReady(bool result);
     void rec_showMessageError(Errors::Error er);
     void rec_showMessageErrorFindValue(Errors::Error er);

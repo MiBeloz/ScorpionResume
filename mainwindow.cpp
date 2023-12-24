@@ -64,20 +64,96 @@ void MainWindow::on_pb_loadFile_clicked() {
     clearAll();
     ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::readingFile]);
 
-    static_cast<void>(QtConcurrent::run([&](){
-        pSelectedFile->setFileName(ui->le_pathFile->text());
-        *pProgramCode = pSelectedFile->read();
+    pSelectedFile->setFileName(ui->le_pathFile->text());
+    QFuture<QStringList> ftrProgramCode = QtConcurrent::run([&] { return pSelectedFile->read(); });
+    *pProgramCode = qMove(ftrProgramCode.result());
 
-        pProgramCode->toQStringList(mListFile);
+    pProgramCode->toQStringList(mListFile);
 
-        if (pProgramCode->isEmpty()) {
-            setEnabledFileWidgets(true);
-            emit sig_emptyFile();
+    if (pProgramCode->isEmpty()) {
+        setEnabledFileWidgets(true);
+        emit sig_emptyFile();
+    }
+    else {
+        emit sig_readyReadFile();
+    }
+}
+
+//void MainWindow::on_pb_loadFile_clicked() {
+//    clearAll();
+//    ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::readingFile]);
+
+//    static_cast<void>(QtConcurrent::run([&](){
+//        pSelectedFile->setFileName(ui->le_pathFile->text());
+//        *pProgramCode = pSelectedFile->read();
+
+//        pProgramCode->toQStringList(mListFile);
+
+//        if (pProgramCode->isEmpty()) {
+//            setEnabledFileWidgets(true);
+//            emit sig_emptyFile();
+//        }
+//        else {
+//            emit sig_readyReadFile();
+//        }
+//    }));
+//}
+
+void MainWindow::rec_readyReadFile() {
+    emit sig_incrementProgressBar();
+    ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::processingFile]);
+
+    for (int i = 0; i < mListFile.size(); ++i) {
+        if (!mListFile[i].isEmpty()) {
+            if (mListFile[i][mListFile[i].size() - 1] == '\n') {
+                mListFile[i] = mListFile[i].mid(0, mListFile[i].size() - 1);
+            }
+        }
+
+        if (!mListFile[i].isEmpty()) {
+            while (mListFile[i][0] == static_cast<char>(32) || mListFile[i][0] == static_cast<char>(9)) {
+                mListFile[i] = mListFile[i].mid(1);
+                if (mListFile[i].isEmpty()) {
+                    break;
+                }
+            }
+        }
+
+        if (!mListFile[i].isEmpty() && mListFile[i][0] == 'N') {
+            ++mCountOfFrames;
+
+            if (i > 0) {
+                std::string str = mListFile[i].toStdString();
+                size_t n = str.find('N' + std::to_string(i) + ' ');
+                if (n == std::string::npos) {
+                    emit sig_error(Errors::erIncorrectNumeration);
+                    return;
+                }
+            }
+        }
+    }
+
+    for (int i = mListFile.size() - 1; i > 11; --i) {
+        if (mListFile[i].isEmpty()) {
+            mListFile.pop_back();
         }
         else {
-            emit sig_readyReadFile();
+            if (mListFile[i] == "M30" || mListFile[i] == "M30 ") {
+                break;
+            }
+            else {
+                emit sig_error(Errors::erEndProgram);
+                return;
+            }
         }
-    }));
+    }
+
+    emit sig_incrementProgressBar();
+
+    ftrTypeOfProcessingReady = QtConcurrent::run([&]() -> bool { return setTypeOfProcessing(); });
+    ftrWtchTypeOfProcessingReady.setFuture(ftrTypeOfProcessingReady);
+    ftrSetToolReady = QtConcurrent::run([&]() -> bool { return setTool(); });
+    ftrWtchSetToolReady.setFuture(ftrSetToolReady);
 }
 
 void MainWindow::on_pb_calculate_clicked() {
@@ -199,64 +275,6 @@ void MainWindow::on_mb_help_about_triggered() {
 
 void MainWindow::on_mb_file_exit_triggered() {
     close();
-}
-
-
-void MainWindow::rec_readyReadFile() {
-    emit sig_incrementProgressBar();
-    ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::processingFile]);
-
-    for (int i = 0; i < mListFile.size(); ++i) {
-        if (!mListFile[i].isEmpty()) {
-            if (mListFile[i][mListFile[i].size() - 1] == '\n') {
-                mListFile[i] = mListFile[i].mid(0, mListFile[i].size() - 1);
-            }
-        }
-
-        if (!mListFile[i].isEmpty()) {
-            while (mListFile[i][0] == static_cast<char>(32) || mListFile[i][0] == static_cast<char>(9)) {
-                mListFile[i] = mListFile[i].mid(1);
-                if (mListFile[i].isEmpty()) {
-                    break;
-                }
-            }
-        }
-
-        if (!mListFile[i].isEmpty() && mListFile[i][0] == 'N') {
-            ++mCountOfFrames;
-
-            if (i > 0) {
-                std::string str = mListFile[i].toStdString();
-                size_t n = str.find('N' + std::to_string(i) + ' ');
-                if (n == std::string::npos) {
-                    emit sig_error(Errors::erIncorrectNumeration);
-                    return;
-                }
-            }
-        }
-    }
-
-    for (int i = mListFile.size() - 1; i > 11; --i) {
-        if (mListFile[i].isEmpty()) {
-            mListFile.pop_back();
-        }
-        else {
-            if (mListFile[i] == "M30" || mListFile[i] == "M30 ") {
-                break;
-            }
-            else {
-                emit sig_error(Errors::erEndProgram);
-                return;
-            }
-        }
-    }
-
-    emit sig_incrementProgressBar();
-
-    ftrTypeOfProcessingReady = QtConcurrent::run([&]() -> bool { return setTypeOfProcessing(); });
-    ftrWtchTypeOfProcessingReady.setFuture(ftrTypeOfProcessingReady);
-    ftrSetToolReady = QtConcurrent::run([&]() -> bool { return setTool(); });
-    ftrWtchSetToolReady.setFuture(ftrSetToolReady);
 }
 
 void MainWindow::rec_processingReady(bool result) {
