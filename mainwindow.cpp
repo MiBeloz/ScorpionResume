@@ -14,13 +14,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->progressBar->setValue(0);
     ui->pb_loadFile->setEnabled(false);
     setEnabledWidgets(false);
-
     QObject::connect(ui->le_pathFile, &QLineEdit::textChanged, this, [&]{
         pSelectedFile->exists(ui->le_pathFile->text()) ? ui->pb_loadFile->setEnabled(true) : ui->pb_loadFile->setEnabled(false); });
 
     QObject::connect(ui->pb_clear, &QPushButton::clicked, this, &MainWindow::clearAll);
     QObject::connect(this, &MainWindow::sig_error, this, &MainWindow::rec_showMessageError);
     QObject::connect(pSelectedFile, &SelectedFile::sig_readError, this, &MainWindow::rec_showMessageError);
+    QObject::connect(pProgramCode, &ProgramCode::sig_errorNumeration, this, &MainWindow::rec_showMessageError);
     QObject::connect(this, &MainWindow::sig_errorFindValue, this, &MainWindow::rec_showMessageErrorFindValue);
     QObject::connect(this, &MainWindow::sig_warning, this, &MainWindow::rec_warning);
     QObject::connect(this, &MainWindow::sig_emptyFile, this, &MainWindow::rec_showMessageEmptyFile);
@@ -62,13 +62,11 @@ void MainWindow::on_pb_findFile_clicked() {
 
 void MainWindow::on_pb_loadFile_clicked() {
     clearAll();
-    ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::readingFile]);
+    ui->lb_progress->setText(tr("%1").arg(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::readingFile]));
 
     pSelectedFile->setFileName(ui->le_pathFile->text());
-    QFuture<QStringList> ftrProgramCode = QtConcurrent::run([&] { return pSelectedFile->read(); });
-    *pProgramCode = qMove(ftrProgramCode.result());
-
-    pProgramCode->toQStringList(mListFile);
+    QFuture<QStringList> result = QtConcurrent::run([&] { return pSelectedFile->read(); });
+    *pProgramCode = result.result();
 
     if (pProgramCode->isEmpty()) {
         setEnabledFileWidgets(true);
@@ -79,74 +77,12 @@ void MainWindow::on_pb_loadFile_clicked() {
     }
 }
 
-//void MainWindow::on_pb_loadFile_clicked() {
-//    clearAll();
-//    ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::readingFile]);
-
-//    static_cast<void>(QtConcurrent::run([&](){
-//        pSelectedFile->setFileName(ui->le_pathFile->text());
-//        *pProgramCode = pSelectedFile->read();
-
-//        pProgramCode->toQStringList(mListFile);
-
-//        if (pProgramCode->isEmpty()) {
-//            setEnabledFileWidgets(true);
-//            emit sig_emptyFile();
-//        }
-//        else {
-//            emit sig_readyReadFile();
-//        }
-//    }));
-//}
-
 void MainWindow::rec_readyReadFile() {
-    emit sig_incrementProgressBar();
     ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::processingFile]);
+    emit sig_incrementProgressBar();
 
-    for (int i = 0; i < mListFile.size(); ++i) {
-        if (!mListFile[i].isEmpty()) {
-            if (mListFile[i][mListFile[i].size() - 1] == '\n') {
-                mListFile[i] = mListFile[i].mid(0, mListFile[i].size() - 1);
-            }
-        }
-
-        if (!mListFile[i].isEmpty()) {
-            while (mListFile[i][0] == static_cast<char>(32) || mListFile[i][0] == static_cast<char>(9)) {
-                mListFile[i] = mListFile[i].mid(1);
-                if (mListFile[i].isEmpty()) {
-                    break;
-                }
-            }
-        }
-
-        if (!mListFile[i].isEmpty() && mListFile[i][0] == 'N') {
-            ++mCountOfFrames;
-
-            if (i > 0) {
-                std::string str = mListFile[i].toStdString();
-                size_t n = str.find('N' + std::to_string(i) + ' ');
-                if (n == std::string::npos) {
-                    emit sig_error(Errors::erIncorrectNumeration);
-                    return;
-                }
-            }
-        }
-    }
-
-    for (int i = mListFile.size() - 1; i > 11; --i) {
-        if (mListFile[i].isEmpty()) {
-            mListFile.pop_back();
-        }
-        else {
-            if (mListFile[i] == "M30" || mListFile[i] == "M30 ") {
-                break;
-            }
-            else {
-                emit sig_error(Errors::erEndProgram);
-                return;
-            }
-        }
-    }
+    pProgramCode->checkCode();
+    mListFile = pProgramCode->getProgramCode();
 
     emit sig_incrementProgressBar();
 

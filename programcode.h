@@ -3,6 +3,8 @@
 
 #include <QObject>
 
+#include "data.h"
+
 class ProgramCode : public QObject {
     Q_OBJECT
 
@@ -12,9 +14,22 @@ public:
     bool isEmpty() const;
 
     ProgramCode& operator=(QStringList&& programCode);
-    void toQStringList(QStringList &stringList);
+    void checkCode();
+
+    QStringList getProgramCode();
+
+signals:
+    void sig_errorNumeration(Errors::Error);
+
 private:
     QStringList m_progamCode;
+    uint32_t m_countOfFrames;
+
+    void forEach(std::function<void(QString&)> f);
+    void removeNewlines();
+    void removeSpacesAndTabsFromBeginning();
+    void calcCountOfFrames();
+    void checkFrameNumber(QString &frame, uint32_t frameNumber);
 };
 
 #endif // PROGRAMCODE_H
