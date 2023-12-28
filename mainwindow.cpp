@@ -26,8 +26,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     QObject::connect(this, &MainWindow::sig_emptyFile, this, &MainWindow::rec_showMessageEmptyFile);
     QObject::connect(this, &MainWindow::sig_incrementProgressBar, this, [&]{ ui->progressBar->setValue(ui->progressBar->value() + 1); });
     QObject::connect(this, &MainWindow::sig_readyReadFile, this, &MainWindow::rec_readyReadFile);
-    QObject::connect(&ftrWtchTypeOfProcessingReady, &QFutureWatcher<bool>::finished, this, [&](){ rec_processingReady(ftrTypeOfProcessingReady.result()); });
-    QObject::connect(&ftrWtchSetToolReady, &QFutureWatcher<bool>::finished, this, [&](){ rec_processingReady(ftrSetToolReady.result()); });
+    QObject::connect(&ftrWtchTypeOfProcessingReady, &QFutureWatcher<bool>::finished, this, [&](){ emit sig_incrementProgressBar(); rec_processingReady(ftrTypeOfProcessingReady.result()); });
+    QObject::connect(&ftrWtchSetToolReady, &QFutureWatcher<bool>::finished, this, [&](){ emit sig_incrementProgressBar(); rec_processingReady(ftrSetToolReady.result()); });
     QObject::connect(ui->spB_findFrame, &MySpinBox::sig_inFocus, this, [&](){
         ui->statusbar->showMessage("Значение от " + QString::number(ui->spB_findFrame->minimum()) + " до " + QString::number(ui->spB_findFrame->maximum()));
     });
@@ -62,7 +62,8 @@ void MainWindow::on_pb_findFile_clicked() {
 
 void MainWindow::on_pb_loadFile_clicked() {
     clearAll();
-    ui->lb_progress->setText(tr("%1").arg(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::readingFile]));
+    setProgressText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::readingFile]);
+    emit sig_incrementProgressBar();
 
     pSelectedFile->setFileName(ui->le_pathFile->text());
     QFuture<QStringList> result = QtConcurrent::run([&] { return pSelectedFile->read(); });
@@ -78,18 +79,51 @@ void MainWindow::on_pb_loadFile_clicked() {
 }
 
 void MainWindow::rec_readyReadFile() {
-    ui->lb_progress->setText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::processingFile]);
+    setProgressText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::processingFile]);
     emit sig_incrementProgressBar();
 
     pProgramCode->checkCode();
+
     mListFile = pProgramCode->getProgramCode();
 
-    emit sig_incrementProgressBar();
-
+    setProgressText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::searchingTypesOfProcessingAndUsedTools]);
     ftrTypeOfProcessingReady = QtConcurrent::run([&]() -> bool { return setTypeOfProcessing(); });
     ftrWtchTypeOfProcessingReady.setFuture(ftrTypeOfProcessingReady);
     ftrSetToolReady = QtConcurrent::run([&]() -> bool { return setTool(); });
     ftrWtchSetToolReady.setFuture(ftrSetToolReady);
+}
+
+void MainWindow::rec_processingReady(bool result) {
+    if (result) {
+        ++m_countOperationsCompleted;
+    }
+
+    if (m_countOperationsCompleted == 2) {
+        ui->lw_file->addItems(pProgramCode->getProgramCode());
+
+        setEnabledWidgets(true);
+        setEnabledFileWidgets(true);
+        ui->lb_tool->setText('T' + mTool);
+        ui->lb_countOfFrames->setText(QString::number(pProgramCode->getCountOfFrames()));
+        if (pProgramCode->getCountOfFrames() - 2 >= 28) {
+            ui->spB_stopFrame->setRange(20, pProgramCode->getCountOfFrames() - 2);
+            ui->spB_stopFrame->setValue(20);
+            ui->spB_findFrame->setRange(1, pProgramCode->getCountOfFrames());
+            ui->spB_findFrame->setValue(1);
+            ui->statusbar->clearMessage();
+        }
+        else {
+            ui->spB_stopFrame->setEnabled(false);
+            emit sig_warning("В программе слишком мало кадров\n"
+                             "для расчета возобновления программы.");
+        }
+
+        setProgressText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::finish]);
+        ui->progressBar->setValue(ui->progressBar->maximum());
+    }
+    else {
+        return;
+    }
 }
 
 void MainWindow::on_pb_calculate_clicked() {
@@ -110,28 +144,24 @@ void MainWindow::on_pb_calculate_clicked() {
         emit sig_errorFindValue(Errors::erFindX);
         return;
     }
-    emit sig_incrementProgressBar();
 
     Y = findValue(frame, 'Y', true);
     if (Y < chekCommandValue) {
         emit sig_errorFindValue(Errors::erFindY);
         return;
     }
-    emit sig_incrementProgressBar();
 
     Z = findValue(frame, 'Z', false);
     if (Z < chekCommandValue) {
         emit sig_errorFindValue(Errors::erFindZ);
         return;
     }
-    emit sig_incrementProgressBar();
 
     F = findValue(frame, 'F', false);
     if (F < chekCommandValue) {
         emit sig_errorFindValue(Errors::erFindF);
         return;
     }
-    emit sig_incrementProgressBar();
 
     G = findValue(frame, 'G', false);
     if (G < chekCommandValue) {
@@ -148,6 +178,7 @@ void MainWindow::on_pb_calculate_clicked() {
     qDebug() << "G = " + QString::number(G);
 
     ui->lb_progress->setText("Генерация УП...");
+    mListFileOut.clear();
     pOutForm->lwOutClear();
 
     for (int i = 0; i < mHead; ++i) {
@@ -213,39 +244,6 @@ void MainWindow::on_mb_file_exit_triggered() {
     close();
 }
 
-void MainWindow::rec_processingReady(bool result) {
-    if (result) {
-        ++mFlag;
-    }
-
-    if (mFlag == 2) {
-        ui->lw_file->addItems(mListFile);
-
-        setEnabledWidgets(true);
-        setEnabledFileWidgets(true);
-        ui->lb_tool->setText('T' + mTool);
-        ui->lb_countOfFrames->setText(QString::number(mCountOfFrames));
-        if (mCountOfFrames - 2 >= 28) {
-            ui->spB_stopFrame->setRange(20, mCountOfFrames - 2);
-            ui->spB_stopFrame->setValue(20);
-            ui->spB_findFrame->setRange(1, mCountOfFrames);
-            ui->spB_findFrame->setValue(1);
-            ui->statusbar->clearMessage();
-        }
-        else {
-            ui->spB_stopFrame->setEnabled(false);
-            emit sig_warning("В программе слишком мало кадров\n"
-                             "для расчета возобновления программы.");
-        }
-
-        ui->lb_progress->setText("Готово!");
-        ui->progressBar->setValue(ui->progressBar->maximum());
-    }
-    else {
-        return;
-    }
-}
-
 void MainWindow::rec_showMessageError(Errors::Error er) {
     clearAll();
     setEnabledFileWidgets(true);
@@ -297,6 +295,13 @@ void MainWindow::setEnabledFileWidgets(bool enabled) {
     ui->menubar->setEnabled(enabled);
 }
 
+void MainWindow::setProgressText(QString text) {
+    ui->lb_progress->setText(tr("%1").arg(text));
+    while (ui->lb_progress->text() != text) {
+        continue;
+    }
+}
+
 bool MainWindow::setTypeOfProcessing() {
     bool findHead = false;
     for (int i = 0; i < mListFile.size(); ++i) {
@@ -325,7 +330,6 @@ bool MainWindow::setTypeOfProcessing() {
         return false;
     }
 
-    emit sig_incrementProgressBar();
     return true;
 }
 
@@ -406,7 +410,6 @@ bool MainWindow::setTool() {
         return false;
     }
 
-    emit sig_incrementProgressBar();
     return true;
 }
 
@@ -476,7 +479,7 @@ void MainWindow::clearAll() {
     mHead = 0;
     mTypesOfProcessing.clear();
     mCountOfFrames = 0;
-    mFlag = 0;
+    m_countOperationsCompleted = 0;
 
     ui->lw_file->clear();
     ui->lw_typeOfProcessing->clear();
@@ -488,7 +491,7 @@ void MainWindow::clearAll() {
     ui->spB_stopFrame->setValue(0);
     ui->spB_findFrame->setRange(0, 0);
     ui->spB_findFrame->setValue(0);
-    ui->progressBar->setRange(0, ProgressLoadingFile::progressOperationName.size());
+    ui->progressBar->setRange(0, ProgressLoadingFile::progressOperationName.size() + 1);
     ui->progressBar->setValue(0);
 
     setEnabledWidgets(false);

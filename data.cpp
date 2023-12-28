@@ -3,7 +3,7 @@
 namespace ApplicationVersion {
     const QString versionMajor = "2";
     const QString versionMinor = "2";
-    const QString versionMicro = "1";
+    const QString versionMicro = "4";
 }
 
 namespace AboutDescription {
@@ -26,8 +26,7 @@ namespace ProgressLoadingFile {
     const QVector<QString> progressOperationName {
         "Читаю файл...",
         "Обрабатываю файл...",
-        "Ищу типы обработок..."
-        "Ищу используемые инструменты..."
+        "Ищу типы обработок и используемые инструменты...",
         "Готово!"
     };
 }

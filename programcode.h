@@ -15,6 +15,7 @@ public:
 
     ProgramCode& operator=(QStringList&& programCode);
     void checkCode();
+    uint32_t getCountOfFrames();
 
     QStringList getProgramCode();
 

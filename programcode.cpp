@@ -20,6 +20,10 @@ void ProgramCode::checkCode() {
     calcCountOfFrames();
 }
 
+uint32_t ProgramCode::getCountOfFrames() {
+    return m_countOfFrames;
+}
+
 QStringList ProgramCode::getProgramCode()
 {
     return m_progamCode;

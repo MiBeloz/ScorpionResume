@@ -42,11 +42,11 @@ private slots:
     void on_pb_findFile_clicked();
     void on_pb_loadFile_clicked();
     void rec_readyReadFile();
+    void rec_processingReady(bool result);
     void on_pb_calculate_clicked();
     void on_pb_findFrame_clicked();
     void on_mb_help_about_triggered();
     void on_mb_file_exit_triggered();
-    void rec_processingReady(bool result);
     void rec_showMessageError(Errors::Error er);
     void rec_showMessageErrorFindValue(Errors::Error er);
     void rec_warning(QString caution);
@@ -67,7 +67,7 @@ private:
     int16_t mHead = 0;
     QMap<size_t, QString> mTypesOfProcessing;
     size_t mCountOfFrames = 0;
-    int mFlag = 0;
+    uint8_t m_countOperationsCompleted = 0;
 
     QFuture<bool> ftrTypeOfProcessingReady;
     QFuture<bool> ftrSetToolReady;
@@ -76,6 +76,7 @@ private:
 
     void setEnabledWidgets(bool enabled);
     void setEnabledFileWidgets(bool enabled);
+    void setProgressText(QString text);
     bool setTypeOfProcessing();
     QString getStrOfProcessing(int i);
     QString getTypeOfProcessing(QString str);

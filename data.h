@@ -24,8 +24,7 @@ namespace ProgressLoadingFile {
     enum OperationName {
         readingFile                 = 0,
         processingFile,
-        searchingTypesOfProcessing,
-        searchingUsedTools,
+        searchingTypesOfProcessingAndUsedTools,
         finish
     };
 
