@@ -5,7 +5,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->setupUi(this);
     pDictionary = new Dictionary(this, Dictionary::Language::english);
     pSelectedFile = new SelectedFile(this);
-    pProgramCode = new ProgramCode(this);
+    pGCode = new GCode(this);
     pOutForm = new OutForm(this);
     pAboutWindow = new About(this);
     QPixmap pixmap(":/picture.png");
@@ -20,14 +20,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     QObject::connect(ui->pb_clear, &QPushButton::clicked, this, &MainWindow::clearAll);
     QObject::connect(this, &MainWindow::sig_error, this, &MainWindow::rec_showMessageError);
     QObject::connect(pSelectedFile, &SelectedFile::sig_readError, this, &MainWindow::rec_showMessageError);
-    QObject::connect(pProgramCode, &ProgramCode::sig_errorNumeration, this, &MainWindow::rec_showMessageError);
+    QObject::connect(pGCode, &GCode::sig_errorNumeration, this, &MainWindow::rec_showMessageError);
     QObject::connect(this, &MainWindow::sig_errorFindValue, this, &MainWindow::rec_showMessageErrorFindValue);
     QObject::connect(this, &MainWindow::sig_warning, this, &MainWindow::rec_warning);
     QObject::connect(this, &MainWindow::sig_emptyFile, this, &MainWindow::rec_showMessageEmptyFile);
     QObject::connect(this, &MainWindow::sig_incrementProgressBar, this, [&]{ ui->progressBar->setValue(ui->progressBar->value() + 1); });
-    QObject::connect(this, &MainWindow::sig_readyReadFile, this, &MainWindow::rec_readyReadFile);
-    QObject::connect(&ftrWtchTypeOfProcessingReady, &QFutureWatcher<bool>::finished, this, [&](){ emit sig_incrementProgressBar(); rec_processingReady(ftrTypeOfProcessingReady.result()); });
-    QObject::connect(&ftrWtchSetToolReady, &QFutureWatcher<bool>::finished, this, [&](){ emit sig_incrementProgressBar(); rec_processingReady(ftrSetToolReady.result()); });
+    QObject::connect(this, &MainWindow::sig_readFile, this, &MainWindow::rec_readFile);
+    QObject::connect(&ftrWtchTypeOfProcessingReady, &QFutureWatcher<bool>::finished, this, [&](){ qDebug() << "proc"; emit sig_incrementProgressBar(); rec_processingReady(ftrTypeOfProcessingReady.result()); });
+    QObject::connect(&ftrWtchSetToolReady, &QFutureWatcher<bool>::finished, this, [&](){ qDebug() << "tool"; emit sig_incrementProgressBar(); rec_processingReady(ftrSetToolReady.result()); });
     QObject::connect(ui->spB_findFrame, &MySpinBox::sig_inFocus, this, [&](){
         ui->statusbar->showMessage("Значение от " + QString::number(ui->spB_findFrame->minimum()) + " до " + QString::number(ui->spB_findFrame->maximum()));
     });
@@ -67,24 +67,24 @@ void MainWindow::on_pb_loadFile_clicked() {
 
     pSelectedFile->setFileName(ui->le_pathFile->text());
     QFuture<QStringList> result = QtConcurrent::run([&] { return pSelectedFile->read(); });
-    *pProgramCode = result.result();
+    *pGCode = result.result();
 
-    if (pProgramCode->isEmpty()) {
+    if (pGCode->isEmpty()) {
         setEnabledFileWidgets(true);
         emit sig_emptyFile();
     }
     else {
-        emit sig_readyReadFile();
+        emit sig_readFile();
     }
 }
 
-void MainWindow::rec_readyReadFile() {
+void MainWindow::rec_readFile() {
     setProgressText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::processingFile]);
     emit sig_incrementProgressBar();
 
-    pProgramCode->checkCode();
+    pGCode->checkCode();
 
-    mListFile = pProgramCode->getProgramCode();
+    mListFile = pGCode->getProgramCode();
 
     setProgressText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::searchingTypesOfProcessingAndUsedTools]);
     ftrTypeOfProcessingReady = QtConcurrent::run([&]() -> bool { return setTypeOfProcessing(); });
@@ -99,16 +99,16 @@ void MainWindow::rec_processingReady(bool result) {
     }
 
     if (m_countOperationsCompleted == 2) {
-        ui->lw_file->addItems(pProgramCode->getProgramCode());
+        ui->lw_file->addItems(pGCode->getProgramCode());
 
         setEnabledWidgets(true);
         setEnabledFileWidgets(true);
         ui->lb_tool->setText('T' + mTool);
-        ui->lb_countOfFrames->setText(QString::number(pProgramCode->getCountOfFrames()));
-        if (pProgramCode->getCountOfFrames() - 2 >= 28) {
-            ui->spB_stopFrame->setRange(20, pProgramCode->getCountOfFrames() - 2);
+        ui->lb_countOfFrames->setText(QString::number(pGCode->getCountOfFrames()));
+        if (pGCode->getCountOfFrames() - 2 >= 28) {
+            ui->spB_stopFrame->setRange(20, pGCode->getCountOfFrames() - 2);
             ui->spB_stopFrame->setValue(20);
-            ui->spB_findFrame->setRange(1, pProgramCode->getCountOfFrames());
+            ui->spB_findFrame->setRange(1, pGCode->getCountOfFrames());
             ui->spB_findFrame->setValue(1);
             ui->statusbar->clearMessage();
         }
@@ -303,34 +303,43 @@ void MainWindow::setProgressText(QString text) {
 }
 
 bool MainWindow::setTypeOfProcessing() {
-    bool findHead = false;
-    for (int i = 0; i < mListFile.size(); ++i) {
-        QString strOfProcessing = getStrOfProcessing(i);
-        if (strOfProcessing.isEmpty()) {
-            continue;
-        }
-        QString typeOfProcessing = getTypeOfProcessing(strOfProcessing);
-        QString frameOfProcessing = getFrameOfProcessing(strOfProcessing);
-        ui->lw_typeOfProcessing->addItem(frameOfProcessing + "\t" + pDictionary->translateTypeOfProcessing(typeOfProcessing));
-        mTypesOfProcessing[i] = typeOfProcessing;
 
-        if (ui->lw_typeOfProcessing->count() > 0 && !findHead) {
-            mHead = i - 1;
-            findHead = true;
+
+    mTypesOfProcessing = pGCode->getTypesOfProcessing();
+    if (!mTypesOfProcessing.isEmpty()) {
+        for (auto it = mTypesOfProcessing.constBegin(); it != mTypesOfProcessing.constEnd(); ++it) {
+            ui->lw_typeOfProcessing->addItem("N" + QString::number(it.key()) + "\t" + it.value());
         }
     }
-
-    if (mTypesOfProcessing.isEmpty()) {
-        emit sig_error(Errors::erNoTypeOfProcessing);
-        return false;
-    }
-
-    if (mHead < 12 || mHead > 12) {
-        emit sig_error(Errors::erIncorrectHead);
-        return false;
-    }
-
     return true;
+//    bool findHead = false;
+//    for (int i = 0; i < mListFile.size(); ++i) {
+//        QString strOfProcessing = getStrOfProcessing(i);
+//        if (strOfProcessing.isEmpty()) {
+//            continue;
+//        }
+//        QString typeOfProcessing = getTypeOfProcessing(strOfProcessing);
+//        QString frameOfProcessing = getFrameOfProcessing(strOfProcessing);
+//        ui->lw_typeOfProcessing->addItem(frameOfProcessing + "\t" + pDictionary->translateTypeOfProcessing(typeOfProcessing));
+//        mTypesOfProcessing[i] = typeOfProcessing;
+
+//        if (ui->lw_typeOfProcessing->count() > 0 && !findHead) {
+//            mHead = i - 1;
+//            findHead = true;
+//        }
+//    }
+
+//    if (mTypesOfProcessing.isEmpty()) {
+//        emit sig_error(Errors::erNoTypeOfProcessing);
+//        return false;
+//    }
+
+//    if (mHead < 12 || mHead > 12) {
+//        emit sig_error(Errors::erIncorrectHead);
+//        return false;
+//    }
+
+//    return true;
 }
 
 QString MainWindow::getStrOfProcessing(int i) {

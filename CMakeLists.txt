@@ -26,8 +26,8 @@ set(PROJECT_SOURCES
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
-    programcode.cpp
-    programcode.h
+    gcode.cpp
+    gcode.h
     outform.cpp
     outform.h
     outform.ui

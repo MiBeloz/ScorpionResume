@@ -12,7 +12,7 @@
 
 #include "data.h"
 #include "selectedfile.h"
-#include "programcode.h"
+#include "gcode.h"
 #include "outform.h"
 #include "about.h"
 #include "myspinbox.h"
@@ -34,14 +34,14 @@ signals:
     void sig_errorFindValue(Errors::Error);
     void sig_warning(QString caution);
     void sig_emptyFile();
-    void sig_readyReadFile();
+    void sig_readFile();
     void sig_incrementProgressBar();
     void sig_processingReady();
 
 private slots:
     void on_pb_findFile_clicked();
     void on_pb_loadFile_clicked();
-    void rec_readyReadFile();
+    void rec_readFile();
     void rec_processingReady(bool result);
     void on_pb_calculate_clicked();
     void on_pb_findFrame_clicked();
@@ -56,7 +56,7 @@ private:
     Ui::MainWindow *ui;
     Dictionary *pDictionary;
     SelectedFile *pSelectedFile;
-    ProgramCode *pProgramCode;
+    GCode *pGCode;
     OutForm *pOutForm;
     About *pAboutWindow;
 
@@ -65,7 +65,7 @@ private:
     QStringList mListFileOut;
     QString mTool;
     int16_t mHead = 0;
-    QMap<size_t, QString> mTypesOfProcessing;
+    QMap<uint32_t, QString> mTypesOfProcessing;
     size_t mCountOfFrames = 0;
     uint8_t m_countOperationsCompleted = 0;
 
