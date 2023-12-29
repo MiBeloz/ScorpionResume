@@ -60,13 +60,11 @@ private:
     OutForm *pOutForm;
     About *pAboutWindow;
 
-
     QStringList mListFile;
     QStringList mListFileOut;
-    QString mTool;
-    int16_t mHead = 0;
-    QMap<uint32_t, QString> mTypesOfProcessing;
-    size_t mCountOfFrames = 0;
+    QMap<uint32_t, QString> m_typesOfProcessing;
+    QString m_tool;
+
     uint8_t m_countOperationsCompleted = 0;
 
     QFuture<bool> ftrTypeOfProcessingReady;
@@ -78,9 +76,6 @@ private:
     void setEnabledFileWidgets(bool enabled);
     void setProgressText(QString text);
     bool setTypeOfProcessing();
-    QString getStrOfProcessing(int i);
-    QString getTypeOfProcessing(QString str);
-    QString getFrameOfProcessing(QString str);
     bool setTool();
     QString getTool(int i);
     int findPosFrame(int frame);

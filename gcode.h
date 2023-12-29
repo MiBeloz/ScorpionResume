@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QStringList>
 #include <QMap>
+#include <QSet>
 #include <regex>
 
 #include "data.h"
@@ -22,7 +23,9 @@ public:
     bool isEmpty() const;
     void checkCode();
     uint32_t getCountOfFrames();
+    uint32_t getHead();
     QMap<uint32_t, QString> getTypesOfProcessing();
+    QStringList getTools();
 
     QStringList getProgramCode();
 
@@ -32,16 +35,22 @@ signals:
 private:
     QStringList m_GCode;
     uint32_t m_countOfFrames;
-    uint8_t m_countHeadFrames;
+    uint32_t m_countHeadFrames;
+    QMap<uint32_t, QString> m_typesOfProcessing;
+    QSet<QString> m_tools;
 
+
+    void reset();
     void forEach(std::function<void(QString&)> f);
     void removeNewlines();
     void removeSpacesAndTabsFromBeginning();
     void calcCountOfFrames();
-    void checkFrameNumber(QString &frame, uint32_t frameNumber);
+    bool checkFrameNumber(QString &frame, uint32_t frameNumber);
     bool frameIsProcessingName(QString frame);
     QString getTypeOfProcessing(QString frame);
-    uint32_t getFrameOfProcessing(QString frame);
+    uint32_t getFrameNumber(QString frame);
+    bool frameIsTool(QString frame);
+    QString getTool(QString frame);
 };
 
 #endif // GCODE_H

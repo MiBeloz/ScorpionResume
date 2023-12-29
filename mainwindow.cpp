@@ -103,12 +103,13 @@ void MainWindow::rec_processingReady(bool result) {
 
         setEnabledWidgets(true);
         setEnabledFileWidgets(true);
-        ui->lb_tool->setText('T' + mTool);
-        ui->lb_countOfFrames->setText(QString::number(pGCode->getCountOfFrames()));
-        if (pGCode->getCountOfFrames() - 2 >= 28) {
-            ui->spB_stopFrame->setRange(20, pGCode->getCountOfFrames() - 2);
+        ui->lb_tool->setText('T' + m_tool);
+        uint32_t countOfFrames = pGCode->getCountOfFrames();
+        ui->lb_countOfFrames->setText(QString::number(countOfFrames));
+        if (countOfFrames - 2 >= 28) {
+            ui->spB_stopFrame->setRange(20, countOfFrames - 2);
             ui->spB_stopFrame->setValue(20);
-            ui->spB_findFrame->setRange(1, pGCode->getCountOfFrames());
+            ui->spB_findFrame->setRange(1, countOfFrames);
             ui->spB_findFrame->setValue(1);
             ui->statusbar->clearMessage();
         }
@@ -170,7 +171,7 @@ void MainWindow::on_pb_calculate_clicked() {
     }
     emit sig_incrementProgressBar();
 
-    qDebug() << "Head = " + QString::number(mHead);
+    qDebug() << "Head = " + QString::number(pGCode->getHead());
     qDebug() << "X = " + QString::number(X);
     qDebug() << "Y = " + QString::number(Y);
     qDebug() << "Z = " + QString::number(Z);
@@ -181,11 +182,11 @@ void MainWindow::on_pb_calculate_clicked() {
     mListFileOut.clear();
     pOutForm->lwOutClear();
 
-    for (int i = 0; i < mHead; ++i) {
+    for (uint32_t i = 0; i < pGCode->getHead(); ++i) {
         mListFileOut.push_back(mListFile[i]);
     }
 
-    for (auto it = mTypesOfProcessing.end(); it != mTypesOfProcessing.begin();) {
+    for (auto it = m_typesOfProcessing.end(); it != m_typesOfProcessing.begin();) {
         --it;
         if (it.key() < frame) {
             qDebug() << QString::number(it.key());
@@ -233,7 +234,6 @@ void MainWindow::on_pb_findFrame_clicked() {
     //ui->lw_file->setCurrentRow(0, QItemSelectionModel::SelectionFlag::SelectCurrent);
     ui->lw_file->setCurrentItem(ui->lw_file->item(ui->spB_findFrame->value()), QItemSelectionModel::SelectionFlag::Select);
     ui->lw_file->scrollToItem(ui->lw_file->item(ui->spB_findFrame->value()), QAbstractItemView::ScrollHint::PositionAtCenter);
-    ui->lw_file->setFocus();
 }
 
 void MainWindow::on_mb_help_about_triggered() {
@@ -303,139 +303,31 @@ void MainWindow::setProgressText(QString text) {
 }
 
 bool MainWindow::setTypeOfProcessing() {
-
-
-    mTypesOfProcessing = pGCode->getTypesOfProcessing();
-    if (!mTypesOfProcessing.isEmpty()) {
-        for (auto it = mTypesOfProcessing.constBegin(); it != mTypesOfProcessing.constEnd(); ++it) {
+    m_typesOfProcessing = pGCode->getTypesOfProcessing();
+    if (!m_typesOfProcessing.isEmpty()) {
+        for (auto it = m_typesOfProcessing.constBegin(); it != m_typesOfProcessing.constEnd(); ++it) {
             ui->lw_typeOfProcessing->addItem("N" + QString::number(it.key()) + "\t" + it.value());
         }
     }
+    else {
+        emit sig_error(Errors::erNoTypeOfProcessing);
+        return false;
+    }
     return true;
-//    bool findHead = false;
-//    for (int i = 0; i < mListFile.size(); ++i) {
-//        QString strOfProcessing = getStrOfProcessing(i);
-//        if (strOfProcessing.isEmpty()) {
-//            continue;
-//        }
-//        QString typeOfProcessing = getTypeOfProcessing(strOfProcessing);
-//        QString frameOfProcessing = getFrameOfProcessing(strOfProcessing);
-//        ui->lw_typeOfProcessing->addItem(frameOfProcessing + "\t" + pDictionary->translateTypeOfProcessing(typeOfProcessing));
-//        mTypesOfProcessing[i] = typeOfProcessing;
-
-//        if (ui->lw_typeOfProcessing->count() > 0 && !findHead) {
-//            mHead = i - 1;
-//            findHead = true;
-//        }
-//    }
-
-//    if (mTypesOfProcessing.isEmpty()) {
-//        emit sig_error(Errors::erNoTypeOfProcessing);
-//        return false;
-//    }
-
-//    if (mHead < 12 || mHead > 12) {
-//        emit sig_error(Errors::erIncorrectHead);
-//        return false;
-//    }
-
-//    return true;
-}
-
-QString MainWindow::getStrOfProcessing(int i) {
-    if (i < 1 || mListFile.size() - 1 - i < 1) {
-        return "";
-    }
-
-    QString processingBegin = deleteFrameNumber(mListFile[i - 1]);
-    QString processing = deleteFrameNumber(mListFile[i]);
-    QString processingEnd = deleteFrameNumber(mListFile[i + 1]);
-
-    if ((processing.size() > 5) &&
-        (processing.size() == processingBegin.size() && processing.size() == processingEnd.size()) &&
-        (processingBegin.mid(0, 5) == processingEnd.mid(0, 5) && processingBegin.mid(0, 5) == ";(---") &&
-        (processing.mid(0, 2) == ";(")) {
-        return mListFile[i];
-    }
-    return "";
-}
-
-QString MainWindow::getTypeOfProcessing(QString str) {
-    std::string typeOfProcessing = deleteFrameNumber(str).toStdString();
-    size_t n = typeOfProcessing.find(" - ");
-    if (n != std::string::npos) {
-        auto itBegin = typeOfProcessing.begin();
-        std::advance(itBegin, n + 3);
-        typeOfProcessing.erase(typeOfProcessing.begin(), itBegin);
-        auto itEnd = typeOfProcessing.begin();
-        while (*itEnd != ')') {
-            ++itEnd;
-        }
-        typeOfProcessing.erase(itEnd, typeOfProcessing.end());
-        return QString::fromStdString(typeOfProcessing);
-    }
-    return "Unknown";
-}
-
-QString MainWindow::getFrameOfProcessing(QString str) {
-    std::string frameOfProcessing = str.toStdString();
-    auto it = std::find(frameOfProcessing.begin(), frameOfProcessing.end(), ' ');
-    if (it != frameOfProcessing.end()) {
-        frameOfProcessing.erase(it, frameOfProcessing.end());
-        return QString::fromStdString(frameOfProcessing);
-    }
-    return "---";
 }
 
 bool MainWindow::setTool() {
-    bool toolFinded = false;
-    QString settingTool;
-
-    for (int i = 0; i < mListFile.size(); ++i) {
-        QString tool = getTool(i);
-        if (tool.isEmpty()) {
-            continue;
-        }
-        else {
-            if (!toolFinded) {
-                toolFinded = true;
-                settingTool = tool;
-                mTool = tool;
-            }
-            else if (settingTool == tool) {
-                emit sig_warning("Возможно в программе используется разное\n"
-                                 "количество оборотов или направление вращения\n"
-                                 "для одного инструмента.");
-            }
-            else {
-                emit sig_error(Errors::erOneMoreTool);
-                return false;
-            }
-        }
-    }
-
-    if (!toolFinded) {
+    QStringList tools = pGCode->getTools();
+    if (tools.isEmpty()) {
         emit sig_error(Errors::erNoTool);
         return false;
     }
-
-    return true;
-}
-
-QString MainWindow::getTool(int i) {
-    QString str = mListFile[i];
-
-    QString strFindTool = "TC_CHANGETOOL(";
-    qsizetype n = str.indexOf(strFindTool);
-    if (n != -1) {
-        str = str.mid(n + strFindTool.size());
-        n = str.indexOf(',');
-        if (n != -1) {
-            str = str.mid(0, n);
-            return str;
-        }
+    if (tools.size() > 1) {
+        emit sig_error(Errors::erOneMoreTool);
+        return false;
     }
-    return "";
+    m_tool = tools[0];
+    return true;
 }
 
 double MainWindow::findValue(int startFrame, QChar command, bool checkIJK) {
@@ -484,15 +376,13 @@ double MainWindow::findValue(int startFrame, QChar command, bool checkIJK) {
 void MainWindow::clearAll() {
     mListFile.clear();
     mListFileOut.clear();
-    mTool = "-";
-    mHead = 0;
-    mTypesOfProcessing.clear();
-    mCountOfFrames = 0;
+    m_tool = "-";
+    m_typesOfProcessing.clear();
     m_countOperationsCompleted = 0;
 
     ui->lw_file->clear();
     ui->lw_typeOfProcessing->clear();
-    ui->lb_tool->setText(mTool);
+    ui->lb_tool->setText(m_tool);
     ui->lb_countOfFrames->setText("-");
     ui->lb_progress->setText("-");
     ui->spB_stopFrame->setValue(0);
