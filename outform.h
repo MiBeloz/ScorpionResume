@@ -8,26 +8,28 @@
 #include "data.h"
 #include "dictionary.h"
 
-namespace Ui { class OutForm; }
+namespace Ui {
+  class OutForm;
+}
 
 class OutForm : public QDialog {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    explicit OutForm(QWidget *parent = nullptr);
-    ~OutForm();
+  explicit OutForm(QWidget *parent = nullptr);
+  ~OutForm();
 
-    void lwOutClear();
-    void lwOutAddList(QStringList item);
-    int getLwOutCount();
+  void lwOutClear();
+  void lwOutAddList(QStringList item);
+  int getLwOutCount();
 
 private slots:
-    void on_pb_close_clicked();
-    void on_pb_save_clicked();
+  void on_pb_close_clicked();
+  void on_pb_save_clicked();
 
 private:
-    Ui::OutForm *ui;
-    Dictionary *pDictionary;
+  Ui::OutForm *ui;
+  Dictionary *pDictionary;
 };
 
 #endif // OUTFORM_H

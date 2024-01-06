@@ -5,20 +5,22 @@
 
 #include "data.h"
 
-namespace Ui { class About; }
+namespace Ui {
+  class About;
+}
 
 class About : public QDialog {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    explicit About(QWidget *parent = nullptr);
-    ~About();
+  explicit About(QWidget *parent = nullptr);
+  ~About();
 
 private slots:
-    void on_pushButton_clicked();
+  void on_pb_ok_clicked();
 
 private:
-    Ui::About *ui;
+  Ui::About *ui;
 };
 
 #endif // ABOUT_H
