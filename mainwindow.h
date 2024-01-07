@@ -15,6 +15,7 @@
 #include "dictionary.h"
 #include "gcode.h"
 #include "myspinbox.h"
+#include "outgcode.h"
 #include "outform.h"
 #include "selectedfile.h"
 
@@ -33,7 +34,6 @@ public:
 
 signals:
   void sig_error(Errors::Error);
-  void sig_errorFindValue(Errors::Error);
   void sig_warning(Errors::Warning wrn);
   void sig_readFile();
   void sig_incrementProgressBar();
@@ -43,6 +43,8 @@ private slots:
   void on_pb_findFile_clicked();
   void on_pb_loadFile_clicked();
   void rec_readFile();
+  bool setTypeOfProcessing();
+  bool setTool();
   void rec_processingReady(bool result);
   void displayDataToForm();
   void setRangeForStopAndFindSpinBoxes();
@@ -59,6 +61,7 @@ private:
   Dictionary *pDictionary;
   SelectedFile *pSelectedFile;
   GCode *pGCode;
+  OutGCode* pOutGCode;
   OutForm *pOutForm;
   About *pAboutWindow;
 
@@ -75,12 +78,6 @@ private:
   void setEnabledWidgets(bool enabled);
   void setEnabledFileWidgets(bool enabled);
   void setProgressText(QString text);
-  bool setTypeOfProcessing();
-  bool setTool();
-  QString getTool(int i);
-  int findPosFrame(int frame);
-  bool findValue(double &axe, int startFrame, QChar command, bool checkIJK);
   void clearAll();
-  QString deleteFrameNumber(QString str);
 };
 #endif // MAINWINDOW_H

@@ -39,7 +39,8 @@ namespace Errors {
     erFindY,
     erFindZ,
     erFindF,
-    erFindG
+    erFindG,
+    erOutFile
   };
   enum Warning { wrnEmptyFile = 0, wrnTooFewFrames };
 
