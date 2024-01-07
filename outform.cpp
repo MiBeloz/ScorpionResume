@@ -6,15 +6,25 @@ OutForm::OutForm(QWidget *parent) : QDialog(parent), ui(new Ui::OutForm) {
   pDictionary = new Dictionary(this, Dictionary::Language::russian);
 }
 
-OutForm::~OutForm() { delete ui; }
+OutForm::~OutForm() {
+  delete ui;
+}
 
-void OutForm::lwOutClear() { ui->lw_out->clear(); }
+void OutForm::lwOutClear() {
+  ui->lw_out->clear();
+}
 
-void OutForm::lwOutAddList(QStringList strList) { ui->lw_out->addItems(strList); }
+void OutForm::lwOutAddList(QStringList strList) {
+  ui->lw_out->addItems(strList);
+}
 
-int OutForm::getLwOutCount() { return ui->lw_out->count(); }
+int OutForm::getLwOutCount() {
+  return ui->lw_out->count();
+}
 
-void OutForm::on_pb_close_clicked() { close(); }
+void OutForm::on_pb_close_clicked() {
+  close();
+}
 
 void OutForm::on_pb_save_clicked() {
   QString path

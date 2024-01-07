@@ -3,20 +3,22 @@
 GCode::GCode(QObject* parent) : QObject{parent} {}
 
 GCode& GCode::operator=(QStringList&& GCode) {
-  m_GCode = qMove(GCode);
   reset();
+  m_GCode = qMove(GCode);
+  removeNewlines();
+  removeSpacesAndTabsFromBeginning();
+  // TODO: removeEmptyFramesFromEnd();
+  calcCountOfFrames();
   return *this;
 }
 
-bool GCode::isEmpty() const { return m_GCode.isEmpty(); }
-
-void GCode::checkCode() {
-  removeNewlines();
-  removeSpacesAndTabsFromBeginning();
-  calcCountOfFrames();
+bool GCode::isEmpty() const {
+  return m_GCode.isEmpty();
 }
 
-uint32_t GCode::getCountOfFrames() { return m_countOfFrames; }
+uint32_t GCode::getCountOfFrames() {
+  return m_countOfFrames;
+}
 
 uint32_t GCode::getHead() {
   if (m_countHeadFrames == 0) {
@@ -57,9 +59,12 @@ QStringList GCode::getTools() {
   return m_tools.values();
 }
 
-QStringList GCode::getProgramCode() { return m_GCode; }
+QStringList GCode::getProgramCode() {
+  return m_GCode;
+}
 
 void GCode::reset() {
+  m_GCode.clear();
   m_countOfFrames = 0;
   m_countHeadFrames = 0;
   m_typesOfProcessing.clear();
@@ -90,6 +95,7 @@ void GCode::calcCountOfFrames() {
     if (frame[0] == 'N') {
       ++m_countOfFrames;
       if (!checkFrameNumber(frame, m_countOfFrames)) {
+        reset();
         emit sig_errorNumeration(Errors::Error::erIncorrectNumeration);
         return;
       }

@@ -3,7 +3,7 @@
 namespace ApplicationVersion {
   const QString versionMajor = "2";
   const QString versionMinor = "2";
-  const QString versionMicro = "8";
+  const QString versionMicro = "9";
 } // namespace ApplicationVersion
 
 namespace AboutDescription {
@@ -27,10 +27,15 @@ namespace ProgressLoadingFile {
   const QVector<QString> progressOperationName{"Читаю файл...", "Обрабатываю файл...", "Ищу типы обработок и используемые инструменты...", "Готово!"};
 }
 
+namespace ProgressGenerateFile {
+  const QVector<QString> progressGenerateName{"Ищу X, Y, Z, F, G...", "Генерация УП...", "Готово!"};
+}
+
 namespace Errors {
   const QString errorMsg = "Error!";
   const QString warningMsg = "Warning!";
   const QVector<QString> errorDescription{"Ошибка открытия файла!",
+                                          "Чтение файла невозможно!\nПустой файл!",
                                           "Программа повреждена!\nНе найдено ни одного вида обработки.",
                                           "Файл программы поврежден!\nНекорректная шапка программы.",
                                           "Обаботка программы невозможна!\nВ программе используется более одного инструмента.",
@@ -43,7 +48,7 @@ namespace Errors {
                                           "Ошибка поиска!\n'F' не найден.",
                                           "Ошибка поиска!\n'G' не найден.",
                                           "Ошибка конечного файла программы!"};
-  const QVector<QString> warningDescription{"Чтение файла невозможно!\nПустой файл!", "В программе слишком мало кадров\nдля расчета возобновления программы!"};
+  const QVector<QString> warningDescription{"В программе слишком мало кадров\nдля расчета возобновления программы!"};
 } // namespace Errors
 
 namespace FileOperations {

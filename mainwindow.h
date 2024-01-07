@@ -15,8 +15,8 @@
 #include "dictionary.h"
 #include "gcode.h"
 #include "myspinbox.h"
-#include "outgcode.h"
 #include "outform.h"
+#include "outgcode.h"
 #include "selectedfile.h"
 
 QT_BEGIN_NAMESPACE
@@ -43,8 +43,8 @@ private slots:
   void on_pb_findFile_clicked();
   void on_pb_loadFile_clicked();
   void rec_readFile();
-  bool setTypeOfProcessing();
-  bool setTool();
+  bool checkTypeOfProcessing();
+  bool checkTools();
   void rec_processingReady(bool result);
   void displayDataToForm();
   void setRangeForStopAndFindSpinBoxes();
@@ -61,14 +61,11 @@ private:
   Dictionary *pDictionary;
   SelectedFile *pSelectedFile;
   GCode *pGCode;
-  OutGCode* pOutGCode;
+  OutGCode *pOutGCode;
   OutForm *pOutForm;
   About *pAboutWindow;
 
-  QStringList mListFile;
-  QStringList mListFileOut;
-  QMap<uint32_t, QString> m_typesOfProcessing;
-  QString m_tool;
+  //  QString m_tool;
 
   QFuture<bool> ftrTypeOfProcessingReady;
   QFuture<bool> ftrSetToolReady;

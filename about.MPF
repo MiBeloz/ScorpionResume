@@ -11,10 +11,6 @@ About::About(QWidget *parent) : QDialog(parent), ui(new Ui::About) {
   ui->lb_text->setText(AboutDescription::description);
 }
 
-About::~About() {
-  delete ui;
-}
+About::~About() { delete ui; }
 
-void About::on_pb_ok_clicked() {
-  close();
-}
+void About::on_pb_ok_clicked() { close(); }

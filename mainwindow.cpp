@@ -10,11 +10,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   pOutForm = new OutForm(this);
   pAboutWindow = new About(this);
   QPixmap pixmap(":/picture.png");
-
   setWindowIcon(pixmap);
-  ui->progressBar->setValue(0);
-  ui->pb_loadFile->setEnabled(false);
-  setEnabledWidgets(false);
 
   QObject::connect(ui->le_pathFile, &QLineEdit::textChanged, this,
                    [&] { pSelectedFile->exists(ui->le_pathFile->text()) ? ui->pb_loadFile->setEnabled(true) : ui->pb_loadFile->setEnabled(false); });
@@ -48,7 +44,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   QObject::connect(ui->spB_stopFrame, &MySpinBox::sig_enterPress, this, &MainWindow::on_pb_calculate_clicked);
 }
 
-MainWindow::~MainWindow() { delete ui; }
+MainWindow::~MainWindow() {
+  delete ui;
+}
 
 void MainWindow::on_pb_findFile_clicked() {
   ui->le_pathFile->setText(
@@ -63,6 +61,7 @@ void MainWindow::on_pb_findFile_clicked() {
 
 void MainWindow::on_pb_loadFile_clicked() {
   clearAll();
+  ui->progressBar->setRange(0, ProgressLoadingFile::progressOperationName.size() + 1);
   setProgressText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::readingFile]);
   emit sig_incrementProgressBar();
 
@@ -72,7 +71,7 @@ void MainWindow::on_pb_loadFile_clicked() {
 
   if (pGCode->isEmpty()) {
     setEnabledFileWidgets(true);
-    emit sig_warning(Errors::Warning::wrnEmptyFile);
+    emit sig_error(Errors::Error::erEmptyFile);
   } else {
     emit sig_readFile();
   }
@@ -82,41 +81,35 @@ void MainWindow::rec_readFile() {
   setProgressText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::processingFile]);
   emit sig_incrementProgressBar();
 
-  pGCode->checkCode();
-
-  mListFile = pGCode->getProgramCode();
-
   setProgressText(ProgressLoadingFile::progressOperationName[ProgressLoadingFile::searchingTypesOfProcessingAndUsedTools]);
-  ftrTypeOfProcessingReady = QtConcurrent::run([&]() -> bool { return setTypeOfProcessing(); });
+  ftrTypeOfProcessingReady = QtConcurrent::run([&]() -> bool { return checkTypeOfProcessing(); });
   ftrWtchTypeOfProcessingReady.setFuture(ftrTypeOfProcessingReady);
-  ftrSetToolReady = QtConcurrent::run([&]() -> bool { return setTool(); });
+  ftrSetToolReady = QtConcurrent::run([&]() -> bool { return checkTools(); });
   ftrWtchSetToolReady.setFuture(ftrSetToolReady);
 }
 
-bool MainWindow::setTypeOfProcessing() {
-  m_typesOfProcessing = pGCode->getTypesOfProcessing();
-  if (!m_typesOfProcessing.isEmpty()) {
-    for (auto it = m_typesOfProcessing.constBegin(); it != m_typesOfProcessing.constEnd(); ++it) {
-      ui->lw_typeOfProcessing->addItem(tr("N%1\t%2").arg(QString::number(it.key()), pDictionary->translateTypeOfProcessing(it.value())));
-    }
-  } else {
+bool MainWindow::checkTypeOfProcessing() {
+  QMap<uint32_t, QString> typesOfProcessing = pGCode->getTypesOfProcessing();
+  if (typesOfProcessing.isEmpty()) {
+    pGCode->reset();
     emit sig_error(Errors::erNoTypeOfProcessing);
     return false;
   }
   return true;
 }
 
-bool MainWindow::setTool() {
+bool MainWindow::checkTools() {
   QStringList tools = pGCode->getTools();
   if (tools.isEmpty()) {
+    pGCode->reset();
     emit sig_error(Errors::erNoTool);
     return false;
   }
   if (tools.size() > 1) {
+    pGCode->reset();
     emit sig_error(Errors::erOneMoreTool);
     return false;
   }
-  m_tool = tools[0];
   return true;
 }
 
@@ -136,7 +129,14 @@ void MainWindow::rec_processingReady(bool result) {
 
 void MainWindow::displayDataToForm() {
   ui->lw_file->addItems(pGCode->getProgramCode());
-  ui->lb_tool->setText('T' + m_tool);
+  QMap<uint32_t, QString> typesOfProcessing = pGCode->getTypesOfProcessing();
+  for (auto it = typesOfProcessing.constBegin(); it != typesOfProcessing.constEnd(); ++it) {
+    ui->lw_typeOfProcessing->addItem(tr("N%1\t%2").arg(QString::number(it.key()), pDictionary->translateTypeOfProcessing(it.value())));
+  }
+  QStringList tools = pGCode->getTools();
+  for (const QString &tool : tools) {
+    ui->lb_tool->setText(ui->lb_tool->text() + 'T' + tool + ' ');
+  }
   ui->lb_countOfFrames->setText(QString::number(pGCode->getCountOfFrames()));
 
   setRangeForStopAndFindSpinBoxes();
@@ -162,22 +162,21 @@ void MainWindow::setRangeForStopAndFindSpinBoxes() {
 }
 
 void MainWindow::on_pb_calculate_clicked() {
-    ui->progressBar->setRange(0, 6);
-    ui->progressBar->setValue(0);
+  ui->progressBar->setRange(0, 6);
+  ui->progressBar->setValue(0);
 
-    pOutGCode->generate(pGCode, ui->spB_stopFrame->value());
-    pOutForm->lwOutClear();
-    QStringList outCode = pOutGCode->getProgramCode();
-    if (!outCode.isEmpty()) {
-        pOutForm->lwOutAddList(outCode);
-    }
-    else {
-        emit sig_error(Errors::Error::erOutFile);
-    }
-    pOutForm->show();
+  pOutGCode->generate(pGCode, ui->spB_stopFrame->value());
+  pOutForm->lwOutClear();
+  QStringList outCode = pOutGCode->getProgramCode();
+  if (!outCode.isEmpty()) {
+    pOutForm->lwOutAddList(outCode);
+  } else {
+    emit sig_error(Errors::Error::erOutFile);
+  }
+  pOutForm->show();
 
-    ui->lb_progress->setText("Готово!");
-    ui->progressBar->setValue(ui->progressBar->maximum());
+  ui->lb_progress->setText("Готово!");
+  ui->progressBar->setValue(ui->progressBar->maximum());
 }
 
 void MainWindow::on_pb_findFrame_clicked() {
@@ -186,9 +185,13 @@ void MainWindow::on_pb_findFrame_clicked() {
   ui->lw_file->scrollToItem(ui->lw_file->item(ui->spB_findFrame->value()), QAbstractItemView::ScrollHint::PositionAtCenter);
 }
 
-void MainWindow::on_mb_help_about_triggered() { pAboutWindow->exec(); }
+void MainWindow::on_mb_help_about_triggered() {
+  pAboutWindow->exec();
+}
 
-void MainWindow::on_mb_file_exit_triggered() { close(); }
+void MainWindow::on_mb_file_exit_triggered() {
+  close();
+}
 
 void MainWindow::rec_showMessageError(Errors::Error er) {
   clearAll();
@@ -205,7 +208,7 @@ void MainWindow::rec_showMessageError(Errors::Error er) {
 void MainWindow::rec_showMessageErrorFindValue(Errors::Error er) {
   pOutForm->close();
   pOutForm->lwOutClear();
-  mListFileOut.clear();
+  // mListFileOut.clear();
   QMessageBox mBox;
   mBox.setWindowTitle(tr("%1").arg(pDictionary->translateString(Errors::errorMsg)));
   mBox.setIcon(QMessageBox::Icon::Critical);
@@ -247,14 +250,12 @@ void MainWindow::setProgressText(QString text) {
 }
 
 void MainWindow::clearAll() {
-  mListFile.clear();
-  mListFileOut.clear();
-  m_tool = "-";
-  m_typesOfProcessing.clear();
+  //  mListFile.clear();
+  //  mListFileOut.clear();
 
   ui->lw_file->clear();
   ui->lw_typeOfProcessing->clear();
-  ui->lb_tool->setText(m_tool);
+  ui->lb_tool->clear();
   ui->lb_countOfFrames->setText("-");
   ui->lb_progress->setText("-");
   ui->spB_stopFrame->setValue(0);
@@ -262,8 +263,7 @@ void MainWindow::clearAll() {
   ui->spB_stopFrame->setValue(0);
   ui->spB_findFrame->setRange(0, 0);
   ui->spB_findFrame->setValue(0);
-  ui->progressBar->setRange(0, ProgressLoadingFile::progressOperationName.size() + 1);
-  ui->progressBar->setValue(0);
+  ui->progressBar->reset();
 
   setEnabledWidgets(false);
 }

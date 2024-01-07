@@ -2,11 +2,17 @@
 
 SelectedFile::SelectedFile(QObject *parent) : QObject(parent) {}
 
-QString SelectedFile::getFileName() const { return m_file.fileName(); }
+QString SelectedFile::getFileName() const {
+  return m_file.fileName();
+}
 
-void SelectedFile::setFileName(QString fileName) { m_file.setFileName(fileName); }
+void SelectedFile::setFileName(QString fileName) {
+  m_file.setFileName(fileName);
+}
 
-bool SelectedFile::exists(const QString &fileName) { return m_file.exists(fileName); }
+bool SelectedFile::exists(const QString &fileName) {
+  return m_file.exists(fileName);
+}
 
 QStringList SelectedFile::read() {
   QStringList result;
@@ -26,4 +32,6 @@ QStringList SelectedFile::read() {
   return result;
 }
 
-void SelectedFile::clear() { m_file.setFileName(QString{}); }
+void SelectedFile::clear() {
+  m_file.setFileName(QString{});
+}

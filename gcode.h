@@ -21,13 +21,12 @@ public:
   GCode& operator=(QStringList&& GCode);
 
   bool isEmpty() const;
-  void checkCode();
   uint32_t getCountOfFrames();
   uint32_t getHead();
   QMap<uint32_t, QString> getTypesOfProcessing();
   QStringList getTools();
-
   QStringList getProgramCode();
+  void reset();
 
 signals:
   void sig_errorNumeration(Errors::Error);
@@ -55,7 +54,6 @@ private:
       }
     }
   }
-  void reset();
   void removeNewlines();
   void removeSpacesAndTabsFromBeginning();
   void calcCountOfFrames();

@@ -26,9 +26,16 @@ namespace ProgressLoadingFile {
   extern const QVector<QString> progressOperationName;
 } // namespace ProgressLoadingFile
 
+namespace ProgressGenerateFile {
+  enum OperationName { searchXYZFG = 0, generate, finish };
+
+  extern const QVector<QString> progressGenerateName;
+} // namespace ProgressGenerateFile
+
 namespace Errors {
   enum Error {
     erOpen = 0,
+    erEmptyFile,
     erNoTypeOfProcessing,
     erIncorrectHead,
     erOneMoreTool,
@@ -42,7 +49,7 @@ namespace Errors {
     erFindG,
     erOutFile
   };
-  enum Warning { wrnEmptyFile = 0, wrnTooFewFrames };
+  enum Warning { wrnTooFewFrames = 0 };
 
   extern const QString errorMsg;
   extern const QString warningMsg;

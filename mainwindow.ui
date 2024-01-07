@@ -37,6 +37,9 @@
         <layout class="QVBoxLayout" name="verticalLayout_ButtonOkClear" stretch="0,0">
          <item>
           <widget class="QPushButton" name="pb_calculate">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -50,6 +53,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="pb_clear">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -71,6 +77,9 @@
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
            <widget class="QListWidget" name="lw_file">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="font">
              <font>
               <family>Lucida Console</family>
@@ -126,7 +135,7 @@
                 </size>
                </property>
                <property name="value">
-                <number>24</number>
+                <number>0</number>
                </property>
               </widget>
              </item>
@@ -151,6 +160,9 @@
        </item>
        <item row="3" column="0">
         <widget class="QGroupBox" name="grB_settings">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="title">
           <string>Установки</string>
          </property>
@@ -219,6 +231,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="pb_loadFile">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>Загрузить</string>
            </property>
@@ -235,6 +250,9 @@
        </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="grB_info">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="title">
           <string>Информация</string>
          </property>
@@ -320,6 +338,9 @@
        </item>
        <item row="2" column="0">
         <widget class="QGroupBox" name="grB_findFrame">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="title">
           <string>Поиск кадра</string>
          </property>
