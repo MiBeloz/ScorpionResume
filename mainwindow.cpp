@@ -6,7 +6,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   pDictionary = new Dictionary(this, Dictionary::Language::english);
   pSelectedFile = new SelectedFile(this);
   pGCode = new GCode(this);
-  pOutGCode = new OutGCode(this);
   pOutForm = new OutForm(this);
   pAboutWindow = new About(this);
   QPixmap pixmap(":/picture.png");
@@ -18,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   QObject::connect(this, &MainWindow::sig_error, this, &MainWindow::rec_showMessageError);
   QObject::connect(pSelectedFile, &SelectedFile::sig_readError, this, &MainWindow::rec_showMessageError);
   QObject::connect(pGCode, &GCode::sig_errorNumeration, this, &MainWindow::rec_showMessageError);
-  QObject::connect(pOutGCode, &OutGCode::sig_errorFindValue, this, &MainWindow::rec_showMessageErrorFindValue);
+  QObject::connect(pGCode, &GCode::sig_errorFindValue, this, &MainWindow::rec_showMessageErrorFindValue);
   QObject::connect(this, &MainWindow::sig_warning, this, &MainWindow::rec_warning);
   QObject::connect(this, &MainWindow::sig_incrementProgressBar, this, [&] { ui->progressBar->setValue(ui->progressBar->value() + 1); });
   QObject::connect(this, &MainWindow::sig_readFile, this, &MainWindow::rec_readFile);
@@ -162,12 +161,17 @@ void MainWindow::setRangeForStopAndFindSpinBoxes() {
 }
 
 void MainWindow::on_pb_calculate_clicked() {
-  ui->progressBar->setRange(0, 6);
+  ui->progressBar->setRange(0, 3);
   ui->progressBar->setValue(0);
 
-  pOutGCode->generate(pGCode, ui->spB_stopFrame->value());
+  setProgressText("Генерация УП...");
+  emit sig_incrementProgressBar();
+  pGCode->generateOutProgramCode(pGCode, ui->spB_stopFrame->value());
+
+  setProgressText("Загрузка УП...");
+  emit sig_incrementProgressBar();
   pOutForm->lwOutClear();
-  QStringList outCode = pOutGCode->getProgramCode();
+  QStringList outCode = pGCode->getOutProgramCode();
   if (!outCode.isEmpty()) {
     pOutForm->lwOutAddList(outCode);
   } else {
@@ -175,7 +179,7 @@ void MainWindow::on_pb_calculate_clicked() {
   }
   pOutForm->show();
 
-  ui->lb_progress->setText("Готово!");
+  setProgressText("Готово!");
   ui->progressBar->setValue(ui->progressBar->maximum());
 }
 
@@ -226,6 +230,13 @@ void MainWindow::rec_warning(Errors::Warning wrn) {
   mBox.exec();
 }
 
+void MainWindow::setProgressText(QString text) {
+  ui->lb_progress->setText(tr("%1").arg(text));
+  while (ui->lb_progress->text() != text) {
+    continue;
+  }
+}
+
 void MainWindow::setEnabledWidgets(bool enabled) {
   ui->grB_info->setEnabled(enabled);
   ui->grB_settings->setEnabled(enabled);
@@ -240,13 +251,6 @@ void MainWindow::setEnabledFileWidgets(bool enabled) {
   ui->pb_loadFile->setEnabled(enabled);
   ui->pb_findFile->setEnabled(enabled);
   ui->menubar->setEnabled(enabled);
-}
-
-void MainWindow::setProgressText(QString text) {
-  ui->lb_progress->setText(tr("%1").arg(text));
-  while (ui->lb_progress->text() != text) {
-    continue;
-  }
 }
 
 void MainWindow::clearAll() {

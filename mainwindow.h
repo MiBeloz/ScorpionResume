@@ -16,7 +16,6 @@
 #include "gcode.h"
 #include "myspinbox.h"
 #include "outform.h"
-#include "outgcode.h"
 #include "selectedfile.h"
 
 QT_BEGIN_NAMESPACE
@@ -61,7 +60,6 @@ private:
   Dictionary *pDictionary;
   SelectedFile *pSelectedFile;
   GCode *pGCode;
-  OutGCode *pOutGCode;
   OutForm *pOutForm;
   About *pAboutWindow;
 
@@ -72,9 +70,9 @@ private:
   QFutureWatcher<bool> ftrWtchTypeOfProcessingReady;
   QFutureWatcher<bool> ftrWtchSetToolReady;
 
+  void setProgressText(QString text);
   void setEnabledWidgets(bool enabled);
   void setEnabledFileWidgets(bool enabled);
-  void setProgressText(QString text);
   void clearAll();
 };
 #endif // MAINWINDOW_H

@@ -22,21 +22,22 @@ uint32_t GCode::getCountOfFrames() {
 
 uint32_t GCode::getHead() {
   if (m_countHeadFrames == 0) {
-    forEach<bool>([&](QString& frame) -> bool {
-      static const std::regex regexPatternHead(R"(N[0-9]{1,}\s\;\([\-]{3,}\)\s?)");
-      if (std::regex_match(frame.toStdString(), regexPatternHead)) {
-        m_countHeadFrames = getFrameNumber(frame);
-        return true;
+    for (int i = 0; i < m_GCode.size(); ++i) {
+      if (!m_GCode[i].isEmpty()) {
+        static const std::regex regexPatternHead(R"(N[0-9]{1,}\s\;\([\-]{3,}\)\s?)");
+        if (std::regex_match(m_GCode[i].toStdString(), regexPatternHead)) {
+          m_countHeadFrames = getFrameNumber(m_GCode[i]);
+          break;
+        }
       }
-      return false;
-    });
+    }
   }
   return m_countHeadFrames;
 }
 
 QMap<uint32_t, QString> GCode::getTypesOfProcessing() {
   if (m_typesOfProcessing.isEmpty()) {
-    forEach<void>([&](QString& frame) {
+    forEach([&](QString& frame) {
       if (frameIsProcessingName(frame)) {
         QString typeOfProcessing = getTypeOfProcessing(frame);
         uint32_t frameOfProcessing = getFrameNumber(frame);
@@ -49,7 +50,7 @@ QMap<uint32_t, QString> GCode::getTypesOfProcessing() {
 
 QStringList GCode::getTools() {
   if (m_tools.isEmpty()) {
-    forEach<void>([&](QString& frame) {
+    forEach([&](QString& frame) {
       if (frameIsTool(frame)) {
         QString tool = getTool(frame);
         m_tools.insert(tool);
@@ -71,8 +72,99 @@ void GCode::reset() {
   m_tools.clear();
 }
 
+void GCode::generateOutProgramCode(GCode *gcode, uint32_t stopFrame) {
+  m_GCodeOut.clear();
+  double X = 0, Y = 0, Z = 0;
+  double F = 0;
+  double G = 0;
+
+  if (findValue(X, stopFrame, 'X')) {
+    emit sig_errorFindValue(Errors::erFindX);
+    return;
+  }
+  if (findValue(Y, stopFrame, 'Y')) {
+    emit sig_errorFindValue(Errors::erFindY);
+    return;
+  }
+  if (findValue(Z, stopFrame, 'Z')) {
+    emit sig_errorFindValue(Errors::erFindZ);
+    return;
+  }
+  if (findValue(F, stopFrame, 'F')) {
+    emit sig_errorFindValue(Errors::erFindF);
+    return;
+  }
+  if (findValue(G, stopFrame, 'G')) {
+    emit sig_errorFindValue(Errors::erFindG);
+    return;
+  }
+
+  qDebug() << "Head = " + QString::number(gcode->getHead());
+  qDebug() << "X = " + QString::number(X);
+  qDebug() << "Y = " + QString::number(Y);
+  qDebug() << "Z = " + QString::number(Z);
+  qDebug() << "F = " + QString::number(F);
+  qDebug() << "G = " + QString::number(G);
+
+  m_GCodeOut.clear();
+
+  for (uint32_t i = 0; i < m_countHeadFrames; ++i) {
+    m_GCodeOut.push_back(m_GCode[i]);
+  }
+
+  for (auto it = m_typesOfProcessing.end(); it != m_typesOfProcessing.begin();) {
+    --it;
+    if (it.key() < stopFrame) {
+      QString str = ";(";
+      for (int j = 0; j < it.value().size() + 13; ++j) {
+        str += "-";
+      }
+      str += ")";
+      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + str + ' ');
+      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " ;(Processing - " + it.value() + ") ");
+      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + str + ' ');
+
+      break;
+    }
+  }
+
+  m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " G1 " + "X" + QString::number(X) + " Y" + QString::number(Y) + " F4000 ");
+  m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " Z" + QString::number(Z) + ' ');
+
+  QString nextFrame = deleteFrameNumber(m_GCode[stopFrame]);
+  if (isFrameContains(nextFrame, "G")) {
+      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + nextFrame);
+  } else {
+      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + 'G' + QString::number(G) + ' ' + nextFrame);
+  }
+  if (!isFrameContains(nextFrame, "F")) {
+      m_GCodeOut[m_GCodeOut.size() - 1] += 'F' + QString::number(F) + ' ';
+  }
+
+  for (int i = stopFrame + 1; i < m_GCode.size(); ++i) {
+    if (i == m_GCode.size() - 1) {
+      m_GCodeOut.push_back(m_GCode[i]);
+    } else {
+      QString sourceFrame = deleteFrameNumber(m_GCode[i]);
+      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + sourceFrame);
+    }
+  }
+}
+
+QStringList GCode::getOutProgramCode() {
+  return m_GCodeOut;
+}
+
+void GCode::forEach(std::function<void(QString &frame)> f) {
+  for (int i = 0; i < m_GCode.size(); ++i) {
+    if (!m_GCode[i].isEmpty()) {
+      f(m_GCode[i]);
+    }
+  }
+}
+
 void GCode::removeNewlines() {
-  forEach<void>([](QString& frame) {
+  forEach([](QString& frame) {
     if (frame[frame.size() - 1] == '\n') {
       frame = frame.mid(0, frame.size() - 1);
     }
@@ -80,7 +172,7 @@ void GCode::removeNewlines() {
 }
 
 void GCode::removeSpacesAndTabsFromBeginning() {
-  forEach<void>([](QString& frame) {
+  forEach([](QString& frame) {
     while (frame[0] == static_cast<char>(32) || frame[0] == static_cast<char>(9)) {
       frame = frame.mid(1);
       if (frame.isEmpty()) {
@@ -91,7 +183,7 @@ void GCode::removeSpacesAndTabsFromBeginning() {
 }
 
 void GCode::calcCountOfFrames() {
-  forEach<void>([&](QString& frame) {
+  forEach([&](QString& frame) {
     if (frame[0] == 'N') {
       ++m_countOfFrames;
       if (!checkFrameNumber(frame, m_countOfFrames)) {
@@ -160,4 +252,54 @@ QString GCode::getTool(QString frame) {
     }
   }
   return "";
+}
+
+bool GCode::findValue(double &axe, int startFrame, QChar command) {
+  axe = -999999;
+  for (int i = startFrame - 1; i > 0; --i) {
+    QString sourceFrame = deleteFrameNumber(m_GCode[i]);
+
+    qsizetype n = sourceFrame.lastIndexOf(command);
+    if (n != -1) {
+      sourceFrame = sourceFrame.mid(n + 1);
+
+      int16_t m = 0;
+      if (sourceFrame[m] == '-') {
+        ++m;
+      }
+
+      while (m < sourceFrame.size() && (sourceFrame[m].isDigit() || sourceFrame[m] == '.')) {
+        ++m;
+      }
+      sourceFrame = sourceFrame.left(m);
+
+      axe = sourceFrame.toDouble();
+      break;
+    }
+  }
+
+  if (axe <= -99999) {
+    return true;
+  }
+  return false;
+}
+
+QString GCode::deleteFrameNumber(QString frame) {
+  std::string strString = frame.toStdString();
+  auto it = std::find(strString.begin(), strString.end(), ' ');
+  if (it != strString.end()) {
+    while (*it == ' ') {
+      ++it;
+    }
+    strString.erase(strString.begin(), it);
+  }
+  return QString::fromStdString(strString);
+}
+
+bool GCode::isFrameContains(QString frame, QString str) {
+  qsizetype n = frame.indexOf(str);
+  if (n != -1) {
+    return true;
+  }
+  return false;
 }

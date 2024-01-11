@@ -6,6 +6,7 @@
 #include <QSet>
 #include <QStringList>
 #include <regex>
+#include <QDebug>
 
 #include "data.h"
 
@@ -28,32 +29,22 @@ public:
   QStringList getProgramCode();
   void reset();
 
+  void generateOutProgramCode(GCode *gcode, uint32_t stopFrame);
+  QStringList getOutProgramCode();
+
 signals:
   void sig_errorNumeration(Errors::Error);
+  void sig_errorFindValue(Errors::Error);
 
 private:
   QStringList m_GCode;
+  QStringList m_GCodeOut;
   uint32_t m_countOfFrames;
   uint32_t m_countHeadFrames;
   QMap<uint32_t, QString> m_typesOfProcessing;
   QSet<QString> m_tools;
 
-  template <typename T = void> void forEach(std::function<T(QString&)> f) {
-    for (int i = 0; i < m_GCode.size(); ++i) {
-      if (!m_GCode[i].isEmpty()) {
-        f(m_GCode[i]);
-      }
-    }
-  }
-  template <bool> void forEach(std::function<bool(QString&)> f) {
-    for (int i = 0; i < m_GCode.size(); ++i) {
-      if (!m_GCode[i].isEmpty()) {
-        if (f(m_GCode[i])) {
-          break;
-        }
-      }
-    }
-  }
+  void forEach(std::function<void(QString&)> f);
   void removeNewlines();
   void removeSpacesAndTabsFromBeginning();
   void calcCountOfFrames();
@@ -63,6 +54,9 @@ private:
   uint32_t getFrameNumber(QString frame);
   bool frameIsTool(QString frame);
   QString getTool(QString frame);
+  bool findValue(double &axe, int startFrame, QChar command);
+  QString deleteFrameNumber(QString frame);
+  bool isFrameContains(QString frame, QString str);
 };
 
 #endif // GCODE_H
