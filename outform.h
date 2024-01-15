@@ -22,6 +22,7 @@ public:
   void lwOutClear();
   void lwOutAddList(QStringList item);
   int getLwOutCount();
+  void changeLanguage(Dictionary::Language language);
 
 private slots:
   void on_pb_close_clicked();

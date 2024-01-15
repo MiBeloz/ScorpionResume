@@ -10,10 +10,6 @@ namespace ApplicationVersion {
   extern const QString versionMicro;
 } // namespace ApplicationVersion
 
-namespace AboutDescription {
-  extern const QString description;
-}
-
 namespace GlobalVariables {
   extern QString homeDirOpenFile;
   extern bool isUTF8Encoding;
@@ -21,20 +17,20 @@ namespace GlobalVariables {
 } // namespace GlobalVariables
 
 namespace ProgressLoadingFile {
-  enum OperationName { readingFile = 0, processingFile, searchingTypesOfProcessingAndUsedTools, finish };
+  enum OperationName { readingFile, processingFile, searchingTypesOfProcessingAndUsedTools, finish };
 
-  extern const QVector<QString> progressOperationName;
+  extern const QVector<QString> progressOperation;
 } // namespace ProgressLoadingFile
 
 namespace ProgressGenerateFile {
-  enum OperationName { searchXYZFG = 0, generate, finish };
+  enum OperationName { searchXYZFG, generate, finish };
 
-  extern const QVector<QString> progressGenerateName;
+  extern const QVector<QString> progressGenerate;
 } // namespace ProgressGenerateFile
 
 namespace Errors {
   enum Error {
-    erOpen = 0,
+    erOpen,
     erEmptyFile,
     erNoTypeOfProcessing,
     erIncorrectHead,
@@ -49,18 +45,12 @@ namespace Errors {
     erFindG,
     erOutFile
   };
-  enum Warning { wrnTooFewFrames = 0 };
+  enum Warning { wrnTooFewFrames };
 
   extern const QString errorMsg;
   extern const QString warningMsg;
   extern const QVector<QString> errorDescription;
   extern const QVector<QString> warningDescription;
 } // namespace Errors
-
-namespace FileOperations {
-  extern const QString open;
-  extern const QString save;
-  extern const QString files;
-} // namespace FileOperations
 
 #endif // DATA_H

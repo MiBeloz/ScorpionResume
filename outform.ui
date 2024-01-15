@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Результат</string>
+   <string>Result</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -27,14 +27,14 @@
    <item>
     <widget class="QPushButton" name="pb_save">
      <property name="text">
-      <string>Сохранить</string>
+      <string>Save</string>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QPushButton" name="pb_close">
      <property name="text">
-      <string>Закрыть</string>
+      <string>Close</string>
      </property>
     </widget>
    </item>

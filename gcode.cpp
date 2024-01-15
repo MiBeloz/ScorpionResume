@@ -7,7 +7,7 @@ GCode& GCode::operator=(QStringList&& GCode) {
   m_GCode = qMove(GCode);
   removeNewlines();
   removeSpacesAndTabsFromBeginning();
-  // TODO: removeEmptyFramesFromEnd();
+  removeEmptyFramesFromEnd();
   calcCountOfFrames();
   return *this;
 }
@@ -74,39 +74,42 @@ void GCode::reset() {
 
 void GCode::generateOutProgramCode(GCode *gcode, uint32_t stopFrame) {
   m_GCodeOut.clear();
-  double X = 0, Y = 0, Z = 0;
-  double F = 0;
-  double G = 0;
 
-  if (findValue(X, stopFrame, 'X')) {
+  QVector<double> commands;
+  commands.resize(5);
+  commands[eCommand::X] = findValue(stopFrame, 'X').value_or(BadValue);
+  commands[eCommand::Y] = findValue(stopFrame, 'Y').value_or(BadValue);
+  commands[eCommand::Z] = findValue(stopFrame, 'Z').value_or(BadValue);
+  commands[eCommand::F] = findValue(stopFrame, 'F').value_or(BadValue);
+  commands[eCommand::G] = findValue(stopFrame, 'G').value_or(BadValue);
+
+  if (commands[eCommand::X] == BadValue) {
     emit sig_errorFindValue(Errors::erFindX);
     return;
   }
-  if (findValue(Y, stopFrame, 'Y')) {
+  if (commands[eCommand::Y] == BadValue) {
     emit sig_errorFindValue(Errors::erFindY);
     return;
   }
-  if (findValue(Z, stopFrame, 'Z')) {
+  if (commands[eCommand::Z] == BadValue) {
     emit sig_errorFindValue(Errors::erFindZ);
     return;
   }
-  if (findValue(F, stopFrame, 'F')) {
+  if (commands[eCommand::F] == BadValue) {
     emit sig_errorFindValue(Errors::erFindF);
     return;
   }
-  if (findValue(G, stopFrame, 'G')) {
+  if (commands[eCommand::G] == BadValue) {
     emit sig_errorFindValue(Errors::erFindG);
     return;
   }
 
   qDebug() << "Head = " + QString::number(gcode->getHead());
-  qDebug() << "X = " + QString::number(X);
-  qDebug() << "Y = " + QString::number(Y);
-  qDebug() << "Z = " + QString::number(Z);
-  qDebug() << "F = " + QString::number(F);
-  qDebug() << "G = " + QString::number(G);
-
-  m_GCodeOut.clear();
+  qDebug() << "X = " + QString::number(commands[eCommand::X]);
+  qDebug() << "Y = " + QString::number(commands[eCommand::Y]);
+  qDebug() << "Z = " + QString::number(commands[eCommand::Z]);
+  qDebug() << "F = " + QString::number(commands[eCommand::F]);
+  qDebug() << "G = " + QString::number(commands[eCommand::G]);
 
   for (uint32_t i = 0; i < m_countHeadFrames; ++i) {
     m_GCodeOut.push_back(m_GCode[i]);
@@ -128,17 +131,17 @@ void GCode::generateOutProgramCode(GCode *gcode, uint32_t stopFrame) {
     }
   }
 
-  m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " G1 " + "X" + QString::number(X) + " Y" + QString::number(Y) + " F4000 ");
-  m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " Z" + QString::number(Z) + ' ');
+  m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " G1 " + "X" + QString::number(commands[eCommand::X]) + " Y" + QString::number(commands[eCommand::Y]) + " F4000 ");
+  m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " Z" + QString::number(commands[eCommand::Z]) + ' ');
 
   QString nextFrame = deleteFrameNumber(m_GCode[stopFrame]);
   if (isFrameContains(nextFrame, "G")) {
       m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + nextFrame);
   } else {
-      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + 'G' + QString::number(G) + ' ' + nextFrame);
+      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + 'G' + QString::number(commands[eCommand::G]) + ' ' + nextFrame);
   }
   if (!isFrameContains(nextFrame, "F")) {
-      m_GCodeOut[m_GCodeOut.size() - 1] += 'F' + QString::number(F) + ' ';
+      m_GCodeOut[m_GCodeOut.size() - 1] += 'F' + QString::number(commands[eCommand::F]) + ' ';
   }
 
   for (int i = stopFrame + 1; i < m_GCode.size(); ++i) {
@@ -180,6 +183,12 @@ void GCode::removeSpacesAndTabsFromBeginning() {
       }
     }
   });
+}
+
+void GCode::removeEmptyFramesFromEnd() {
+    for (qsizetype i = m_GCode.size() - 1; m_GCode[i].isEmpty(); --i) {
+        m_GCode.pop_back();
+    }
 }
 
 void GCode::calcCountOfFrames() {
@@ -254,11 +263,10 @@ QString GCode::getTool(QString frame) {
   return "";
 }
 
-bool GCode::findValue(double &axe, int startFrame, QChar command) {
-  axe = -999999;
+std::optional<double> GCode::findValue(int startFrame, QChar command) {
+  double result{0};
   for (int i = startFrame - 1; i > 0; --i) {
     QString sourceFrame = deleteFrameNumber(m_GCode[i]);
-
     qsizetype n = sourceFrame.lastIndexOf(command);
     if (n != -1) {
       sourceFrame = sourceFrame.mid(n + 1);
@@ -271,17 +279,13 @@ bool GCode::findValue(double &axe, int startFrame, QChar command) {
       while (m < sourceFrame.size() && (sourceFrame[m].isDigit() || sourceFrame[m] == '.')) {
         ++m;
       }
-      sourceFrame = sourceFrame.left(m);
 
-      axe = sourceFrame.toDouble();
-      break;
+      sourceFrame = sourceFrame.left(m);
+      result = sourceFrame.toDouble();
+      return result;
     }
   }
-
-  if (axe <= -99999) {
-    return true;
-  }
-  return false;
+  return std::nullopt;
 }
 
 QString GCode::deleteFrameNumber(QString frame) {

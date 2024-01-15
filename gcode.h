@@ -6,6 +6,7 @@
 #include <QSet>
 #include <QStringList>
 #include <regex>
+#include <optional>
 #include <QDebug>
 
 #include "data.h"
@@ -37,6 +38,8 @@ signals:
   void sig_errorFindValue(Errors::Error);
 
 private:
+  enum eCommand {X,Y,Z,F,G};
+  constexpr static double BadValue = -100000;
   QStringList m_GCode;
   QStringList m_GCodeOut;
   uint32_t m_countOfFrames;
@@ -47,6 +50,7 @@ private:
   void forEach(std::function<void(QString&)> f);
   void removeNewlines();
   void removeSpacesAndTabsFromBeginning();
+  void removeEmptyFramesFromEnd();
   void calcCountOfFrames();
   bool checkFrameNumber(QString& frame, uint32_t frameNumber);
   bool frameIsProcessingName(QString frame);
@@ -54,7 +58,7 @@ private:
   uint32_t getFrameNumber(QString frame);
   bool frameIsTool(QString frame);
   QString getTool(QString frame);
-  bool findValue(double &axe, int startFrame, QChar command);
+  std::optional<double> findValue(int startFrame, QChar command);
   QString deleteFrameNumber(QString frame);
   bool isFrameContains(QString frame, QString str);
 };

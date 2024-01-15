@@ -3,37 +3,26 @@
 namespace ApplicationVersion {
   const QString versionMajor = "2";
   const QString versionMinor = "2";
-  const QString versionMicro = "10";
+  const QString versionMicro = "12";
 } // namespace ApplicationVersion
 
-namespace AboutDescription {
-  const QString description = "\tScorpion Resume\n"
-                              "\tВерсия "
-                              + ApplicationVersion::versionMajor + '.' + ApplicationVersion::versionMinor + "." + ApplicationVersion::versionMicro + "\n\n"
-                              + "\tБелозеров Михаил\n"
-                                "\t2023\n"
-                                "\n"
-                                "\tПредназначена для возобновления программ\n"
-                                "\tстанка 'Scorpion' с определенного кадра.";
-}
-
 namespace GlobalVariables {
-  QString homeDirOpenFile{"G:/"};
-  bool isUTF8Encoding{false};
+  QString homeDirOpenFile = "G:/";
+  bool isUTF8Encoding = false;
   QString defaultFileFormat = "MPF";
 } // namespace GlobalVariables
 
 namespace ProgressLoadingFile {
-  const QVector<QString> progressOperationName{"Читаю файл...", "Обрабатываю файл...", "Ищу типы обработок и используемые инструменты...", "Готово!"};
+  const QVector<QString> progressOperation{"Reading file", "Processing file", "Looking for types of processing and tools used", "Ready"};
 }
 
 namespace ProgressGenerateFile {
-  const QVector<QString> progressGenerateName{"Ищу X, Y, Z, F, G...", "Генерация УП...", "Готово!"};
+  const QVector<QString> progressGenerate{"Looking for values X, Y, Z, F, G", "Generating the CP", "Ready"};
 }
 
 namespace Errors {
-  const QString errorMsg = "Error!";
-  const QString warningMsg = "Warning!";
+  const QString errorMsg = "Error";
+  const QString warningMsg = "Warning";
   const QVector<QString> errorDescription{"Ошибка открытия файла!",
                                           "Чтение файла невозможно!\nПустой файл!",
                                           "Программа повреждена!\nНе найдено ни одного вида обработки.",
@@ -50,9 +39,3 @@ namespace Errors {
                                           "Ошибка конечного файла программы!"};
   const QVector<QString> warningDescription{"В программе слишком мало кадров\nдля расчета возобновления программы!"};
 } // namespace Errors
-
-namespace FileOperations {
-  const QString open = "Open";
-  const QString save = "Save";
-  const QString files = "files";
-} // namespace FileOperations

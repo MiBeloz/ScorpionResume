@@ -47,7 +47,7 @@ private slots:
   void rec_processingReady(bool result);
   void displayDataToForm();
   void setRangeForStopAndFindSpinBoxes();
-  void on_pb_calculate_clicked();
+  void on_pb_generate_clicked();
   void on_pb_findFrame_clicked();
   void on_mb_help_about_triggered();
   void on_mb_file_exit_triggered();
@@ -63,13 +63,12 @@ private:
   OutForm *pOutForm;
   About *pAboutWindow;
 
-  //  QString m_tool;
-
   QFuture<bool> ftrTypeOfProcessingReady;
   QFuture<bool> ftrSetToolReady;
   QFutureWatcher<bool> ftrWtchTypeOfProcessingReady;
   QFutureWatcher<bool> ftrWtchSetToolReady;
 
+  void changeLanguage(Dictionary::Language language);
   void setProgressText(QString text);
   void setEnabledWidgets(bool enabled);
   void setEnabledFileWidgets(bool enabled);
