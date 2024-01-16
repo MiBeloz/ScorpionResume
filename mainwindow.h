@@ -32,7 +32,7 @@ public:
   ~MainWindow();
 
 signals:
-  void sig_error(Errors::Error);
+  void sig_error(Errors::Error, bool resetAll = true);
   void sig_warning(Errors::Warning wrn);
   void sig_readFile();
   void sig_incrementProgressBar();
@@ -51,9 +51,8 @@ private slots:
   void on_pb_findFrame_clicked();
   void on_mb_help_about_triggered();
   void on_mb_file_exit_triggered();
-  void rec_showMessageError(Errors::Error er);
-  void rec_showMessageErrorFindValue(Errors::Error er);
-  void rec_warning(Errors::Warning wrn);
+  void rec_showMessageError(Errors::Error er, bool resetAll = true);
+  void rec_showMessageWarning(Errors::Warning wrn);
 
 private:
   Ui::MainWindow *ui;

@@ -150,10 +150,13 @@
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>40</height>
+           <height>30</height>
           </size>
          </property>
         </spacer>
@@ -181,7 +184,7 @@
             <property name="minimumSize">
              <size>
               <width>120</width>
-              <height>13</height>
+              <height>25</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -262,7 +265,7 @@
             <property name="minimumSize">
              <size>
               <width>114</width>
-              <height>13</height>
+              <height>16</height>
              </size>
             </property>
             <property name="text">
@@ -275,7 +278,7 @@
             <property name="minimumSize">
              <size>
               <width>120</width>
-              <height>13</height>
+              <height>16</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -294,7 +297,7 @@
             <property name="minimumSize">
              <size>
               <width>120</width>
-              <height>13</height>
+              <height>16</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -313,7 +316,7 @@
             <property name="minimumSize">
              <size>
               <width>114</width>
-              <height>13</height>
+              <height>16</height>
              </size>
             </property>
             <property name="text">

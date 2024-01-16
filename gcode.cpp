@@ -2,17 +2,16 @@
 
 GCode::GCode(QObject* parent) : QObject{parent} {}
 
-void GCode::addGCode(QStringList GCodeList) {
+bool GCode::addGCode(QStringList GCodeList) {
   reset();
   m_GCode = GCodeList;
+  if (!m_GCode.isEmpty() && !m_GCode[0].isEmpty()) {
+    m_GCode.push_front("");
+  }
   removeNewlines();
   removeSpacesAndTabsFromBeginning();
-  removeEmptyFramesFromEnd();
-  calcCountOfFrames();
-}
-
-bool GCode::isEmpty() const {
-  return m_GCode.isEmpty();
+  removeEmptyFrames();
+  return (calcCountOfFrames() && checkEndProgram() && calcCountHeadFrames());
 }
 
 uint32_t GCode::getCountOfFrames() {
@@ -20,17 +19,6 @@ uint32_t GCode::getCountOfFrames() {
 }
 
 uint32_t GCode::getHead() {
-  if (m_countHeadFrames == 0) {
-    for (int i = 0; i < m_GCode.size(); ++i) {
-      if (!m_GCode[i].isEmpty()) {
-        static const std::regex regexPatternHead(R"(N[0-9]{1,}\s\;\([\-]{3,}\)\s?)");
-        if (std::regex_match(m_GCode[i].toStdString(), regexPatternHead)) {
-          m_countHeadFrames = getFrameNumber(m_GCode[i]);
-          break;
-        }
-      }
-    }
-  }
   return m_countHeadFrames;
 }
 
@@ -71,7 +59,7 @@ void GCode::reset() {
   m_tools.clear();
 }
 
-void GCode::generateOutProgramCode(GCode *gcode, uint32_t stopFrame) {
+void GCode::generateOutProgramCode(GCode* gcode, uint32_t stopFrame) {
   m_GCodeOut.clear();
 
   QVector<double> commands;
@@ -83,23 +71,23 @@ void GCode::generateOutProgramCode(GCode *gcode, uint32_t stopFrame) {
   commands[eCommand::G] = findValue(stopFrame, 'G').value_or(BadValue);
 
   if (commands[eCommand::X] == BadValue) {
-    emit sig_errorFindValue(Errors::erFindX);
+    emit sig_error(Errors::erFindX, false);
     return;
   }
   if (commands[eCommand::Y] == BadValue) {
-    emit sig_errorFindValue(Errors::erFindY);
+    emit sig_error(Errors::erFindY, false);
     return;
   }
   if (commands[eCommand::Z] == BadValue) {
-    emit sig_errorFindValue(Errors::erFindZ);
+    emit sig_error(Errors::erFindZ, false);
     return;
   }
   if (commands[eCommand::F] == BadValue) {
-    emit sig_errorFindValue(Errors::erFindF);
+    emit sig_error(Errors::erFindF, false);
     return;
   }
   if (commands[eCommand::G] == BadValue) {
-    emit sig_errorFindValue(Errors::erFindG);
+    emit sig_error(Errors::erFindG, false);
     return;
   }
 
@@ -130,17 +118,18 @@ void GCode::generateOutProgramCode(GCode *gcode, uint32_t stopFrame) {
     }
   }
 
-  m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " G1 " + "X" + QString::number(commands[eCommand::X]) + " Y" + QString::number(commands[eCommand::Y]) + " F4000 ");
+  m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " G1 " + "X" + QString::number(commands[eCommand::X]) + " Y"
+                       + QString::number(commands[eCommand::Y]) + " F4000 ");
   m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " Z" + QString::number(commands[eCommand::Z]) + ' ');
 
   QString nextFrame = deleteFrameNumber(m_GCode[stopFrame]);
   if (isFrameContains(nextFrame, "G")) {
-      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + nextFrame);
+    m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + nextFrame);
   } else {
-      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + 'G' + QString::number(commands[eCommand::G]) + ' ' + nextFrame);
+    m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + 'G' + QString::number(commands[eCommand::G]) + ' ' + nextFrame);
   }
   if (!isFrameContains(nextFrame, "F")) {
-      m_GCodeOut[m_GCodeOut.size() - 1] += 'F' + QString::number(commands[eCommand::F]) + ' ';
+    m_GCodeOut[m_GCodeOut.size() - 1] += 'F' + QString::number(commands[eCommand::F]) + ' ';
   }
 
   for (int i = stopFrame + 1; i < m_GCode.size(); ++i) {
@@ -157,8 +146,8 @@ QStringList GCode::getOutProgramCode() {
   return m_GCodeOut;
 }
 
-void GCode::forEach(std::function<void(QString &frame)> f) {
-  for (int i = 0; i < m_GCode.size(); ++i) {
+void GCode::forEach(std::function<void(QString& frame)> f) {
+  for (int i = 1; i < m_GCode.size(); ++i) {
     if (!m_GCode[i].isEmpty()) {
       f(m_GCode[i]);
     }
@@ -184,24 +173,48 @@ void GCode::removeSpacesAndTabsFromBeginning() {
   });
 }
 
-void GCode::removeEmptyFramesFromEnd() {
-  for (qsizetype i = 0; i > m_GCode.size(); ++i) {
-    if (i != 0)
-      m_GCode.pop_back();
+void GCode::removeEmptyFrames() {
+  for (qsizetype i = m_GCode.size() - 1; i > 0; --i) {
+    if (m_GCode[i].isEmpty()) {
+      m_GCode.removeAt(i);
+    }
   }
 }
 
-void GCode::calcCountOfFrames() {
+bool GCode::calcCountOfFrames() {
+  bool calcOfFramesIsOk = true;
   forEach([&](QString& frame) {
     if (frame[0] == 'N') {
       ++m_countOfFrames;
       if (!checkFrameNumber(frame, m_countOfFrames)) {
         reset();
-        emit sig_errorNumeration(Errors::Error::erIncorrectNumeration);
+        calcOfFramesIsOk = false;
+        emit sig_error(Errors::Error::erIncorrectNumeration);
         return;
       }
     }
   });
+  return calcOfFramesIsOk;
+}
+
+bool GCode::calcCountHeadFrames() {
+  bool calcHeadIsOk = true;
+  if (m_countHeadFrames == 0) {
+    for (int i = 0; i < m_GCode.size(); ++i) {
+      if (!m_GCode[i].isEmpty()) {
+        static const std::regex regexPatternHead(R"(N[0-9]{1,}\s\;\([\-]{3,}\)\s?)");
+        if (std::regex_match(m_GCode[i].toStdString(), regexPatternHead)) {
+          m_countHeadFrames = getFrameNumber(m_GCode[i]);
+          if (m_countHeadFrames != 12) {
+            calcHeadIsOk = false;
+            emit sig_error(Errors::Error::erIncorrectHead);
+          }
+          break;
+        }
+      }
+    }
+  }
+  return calcHeadIsOk;
 }
 
 bool GCode::checkFrameNumber(QString& frame, uint32_t frameNumber) {
@@ -305,5 +318,14 @@ bool GCode::isFrameContains(QString frame, QString str) {
   if (n != -1) {
     return true;
   }
+  return false;
+}
+
+bool GCode::checkEndProgram() {
+  static const std::regex regexEndProgram(R"(M30\s?)");
+  if (std::regex_match(m_GCode[m_GCode.size() - 1].toStdString(), regexEndProgram)) {
+    return true;
+  }
+  emit sig_error(Errors::Error::erEndProgram);
   return false;
 }

@@ -24,7 +24,7 @@ private slots:
 
 private:
   Ui::About *ui;
-  Dictionary* pDictionary;
+  Dictionary *pDictionary;
 
   void setLanhuage();
 };

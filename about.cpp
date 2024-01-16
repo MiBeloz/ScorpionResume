@@ -29,9 +29,8 @@ void About::setLanhuage() {
                           "\tBelozerov Mihail\n"
                           "\t2024\n"
                           "\n"
-                          "\t%5.").arg(pDictionary->translateString("Version"),
-                                       ApplicationVersion::versionMajor,
-                                       ApplicationVersion::versionMinor,
-                                       ApplicationVersion::versionMicro,
-                                       pDictionary->translateString("Designed to resume 'Scorpion' machine programs from a specific frame")));
+                          "\t%5.")
+                           .arg(pDictionary->translateString("Version"), ApplicationVersion::versionMajor, ApplicationVersion::versionMinor,
+                                ApplicationVersion::versionMicro,
+                                pDictionary->translateString("Designed to resume 'Scorpion' machine programs from a specific frame")));
 }

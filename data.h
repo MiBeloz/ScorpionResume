@@ -43,7 +43,6 @@ namespace Errors {
     erFindZ,
     erFindF,
     erFindG,
-    erOutFile
   };
   enum Warning { wrnTooFewFrames };
 

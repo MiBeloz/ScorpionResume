@@ -2,8 +2,8 @@
 
 namespace ApplicationVersion {
   const QString versionMajor = "2";
-  const QString versionMinor = "2";
-  const QString versionMicro = "14";
+  const QString versionMinor = "3";
+  const QString versionMicro = "0";
 } // namespace ApplicationVersion
 
 namespace GlobalVariables {
@@ -35,7 +35,6 @@ namespace Errors {
                                           "Ошибка поиска!\n'Y' не найден.",
                                           "Ошибка поиска!\n'Z' не найден.",
                                           "Ошибка поиска!\n'F' не найден.",
-                                          "Ошибка поиска!\n'G' не найден.",
-                                          "Ошибка конечного файла программы!"};
+                                          "Ошибка поиска!\n'G' не найден."};
   const QVector<QString> warningDescription{"В программе слишком мало кадров\nдля расчета возобновления программы!"};
 } // namespace Errors

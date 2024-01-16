@@ -7,7 +7,7 @@ QString SelectedFile::getFileName() const {
 }
 
 void SelectedFile::setFileName(QString fileName) {
-    m_file.setFileName(fileName);
+  m_file.setFileName(fileName);
 }
 
 bool SelectedFile::exists(const QString &fileName) const {

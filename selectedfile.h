@@ -19,7 +19,7 @@ public:
   void clear();
 
 signals:
-  void sig_readError(Errors::Error);
+  void sig_readError(Errors::Error, bool resetAll = true);
 
 private:
   QFile m_file;
