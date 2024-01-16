@@ -62,7 +62,7 @@ void MainWindow::on_pb_findFile_clicked() {
 void MainWindow::on_pb_loadFile_clicked() {
   clearAll();
   ui->progressBar->setRange(0, ProgressLoadingFile::progressOperation.size());
-  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::readingFile] + "..."));
+  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::readingFile]) + "...");
   emit sig_incrementProgressBar();
 
   pSelectedFile->setFileName(ui->le_pathFile->text());
@@ -76,10 +76,10 @@ void MainWindow::on_pb_loadFile_clicked() {
 }
 
 void MainWindow::rec_readFile() {
-  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::processingFile] + "..."));
+  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::processingFile]) + "...");
   emit sig_incrementProgressBar();
 
-  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::searchingTypesOfProcessingAndUsedTools] + "..."));
+  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::searchingTypesOfProcessingAndUsedTools]) + "...");
   ftrTypeOfProcessingReady = QtConcurrent::run([&]() -> bool { return checkTypeOfProcessing(); });
   ftrWtchTypeOfProcessingReady.setFuture(ftrTypeOfProcessingReady);
   ftrSetToolReady = QtConcurrent::run([&]() -> bool { return checkTools(); });
@@ -163,11 +163,11 @@ void MainWindow::on_pb_generate_clicked() {
   ui->progressBar->setRange(0, ProgressGenerateFile::progressGenerate.size());
   ui->progressBar->reset();
 
-  setProgressText(pDictionary->translateString(ProgressGenerateFile::progressGenerate[ProgressGenerateFile::OperationName::searchXYZFG] + "..."));
+  setProgressText(pDictionary->translateString(ProgressGenerateFile::progressGenerate[ProgressGenerateFile::OperationName::searchXYZFG]) + "...");
   emit sig_incrementProgressBar();
   pGCode->generateOutProgramCode(pGCode, ui->spB_stopFrame->value());
 
-  setProgressText(pDictionary->translateString(ProgressGenerateFile::progressGenerate[ProgressGenerateFile::OperationName::generate] + "..."));
+  setProgressText(pDictionary->translateString(ProgressGenerateFile::progressGenerate[ProgressGenerateFile::OperationName::generate]) + "...");
   emit sig_incrementProgressBar();
   pOutForm->lwOutClear();
   QStringList outCode = pGCode->getOutProgramCode();
