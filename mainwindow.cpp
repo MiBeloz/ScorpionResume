@@ -66,9 +66,7 @@ void MainWindow::on_pb_loadFile_clicked() {
   emit sig_incrementProgressBar();
 
   pSelectedFile->setFileName(ui->le_pathFile->text());
-  QFuture<QStringList> result = QtConcurrent::run([&] { return pSelectedFile->read(); });
-  *pGCode = result.result();
-
+  pGCode->addGCode(pSelectedFile->read());
   if (pGCode->isEmpty()) {
     setEnabledFileWidgets(true);
     emit sig_error(Errors::Error::erEmptyFile);

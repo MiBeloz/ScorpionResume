@@ -7,31 +7,32 @@ QString SelectedFile::getFileName() const {
 }
 
 void SelectedFile::setFileName(QString fileName) {
-  m_file.setFileName(fileName);
+    m_file.setFileName(fileName);
 }
 
-bool SelectedFile::exists(const QString &fileName) {
+bool SelectedFile::exists(const QString &fileName) const {
   return m_file.exists(fileName);
 }
 
 QStringList SelectedFile::read() {
-  QStringList result;
+  m_ListFile.clear();
   if (!m_file.open(QIODevice::ReadOnly | QIODevice::Text)) {
     emit sig_readError(Errors::erOpen);
   }
 
   while (!m_file.atEnd()) {
     if (GlobalVariables::isUTF8Encoding) { // Если текст в локальной 8-бит кодировке (windows-1251);
-      result.append(QString::fromUtf8(m_file.readLine()));
+      m_ListFile.append(QString::fromUtf8(m_file.readLine()));
     } else { // Если текст в UTF-8
-      result.append(QString::fromLocal8Bit(m_file.readLine()));
+      m_ListFile.append(QString::fromLocal8Bit(m_file.readLine()));
     }
   }
   m_file.close();
 
-  return result;
+  return m_ListFile;
 }
 
 void SelectedFile::clear() {
   m_file.setFileName(QString{});
+  m_ListFile.clear();
 }

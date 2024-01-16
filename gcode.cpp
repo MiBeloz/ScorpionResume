@@ -2,14 +2,13 @@
 
 GCode::GCode(QObject* parent) : QObject{parent} {}
 
-GCode& GCode::operator=(QStringList&& GCode) {
+void GCode::addGCode(QStringList GCodeList) {
   reset();
-  m_GCode = qMove(GCode);
+  m_GCode = GCodeList;
   removeNewlines();
   removeSpacesAndTabsFromBeginning();
   removeEmptyFramesFromEnd();
   calcCountOfFrames();
-  return *this;
 }
 
 bool GCode::isEmpty() const {
@@ -186,9 +185,10 @@ void GCode::removeSpacesAndTabsFromBeginning() {
 }
 
 void GCode::removeEmptyFramesFromEnd() {
-    for (qsizetype i = m_GCode.size() - 1; m_GCode[i].isEmpty(); --i) {
-        m_GCode.pop_back();
-    }
+  for (qsizetype i = 0; i > m_GCode.size(); ++i) {
+    if (i != 0)
+      m_GCode.pop_back();
+  }
 }
 
 void GCode::calcCountOfFrames() {

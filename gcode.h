@@ -17,11 +17,7 @@ class GCode : public QObject {
 public:
   explicit GCode(QObject* parent = nullptr);
 
-  GCode(GCode& other) = delete;
-  GCode(GCode&& other) = delete;
-  GCode& operator=(QStringList& GCode) = delete;
-  GCode& operator=(QStringList&& GCode);
-
+  void addGCode(QStringList GCodeList);
   bool isEmpty() const;
   uint32_t getCountOfFrames();
   uint32_t getHead();

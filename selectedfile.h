@@ -14,7 +14,7 @@ public:
 
   QString getFileName() const;
   void setFileName(QString fileName);
-  bool exists(const QString &fileName);
+  bool exists(const QString &fileName) const;
   QStringList read();
   void clear();
 
@@ -23,6 +23,7 @@ signals:
 
 private:
   QFile m_file;
+  QStringList m_ListFile;
 };
 
 #endif // SELECTFILE_H
