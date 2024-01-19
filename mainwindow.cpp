@@ -92,7 +92,7 @@ void MainWindow::rec_readFile() {
 }
 
 bool MainWindow::checkTypeOfProcessing() {
-  QMap<uint32_t, QString> typesOfProcessing = pGCode->getTypesOfProcessing();
+  QMap<int, QString> typesOfProcessing = pGCode->getTypesOfProcessing();
   if (typesOfProcessing.isEmpty()) {
     pGCode->reset();
     emit sig_error(Errors::erNoTypeOfProcessing);
@@ -132,7 +132,7 @@ void MainWindow::rec_processingReady(bool result) {
 
 void MainWindow::displayDataToForm() {
   ui->lw_file->addItems(pGCode->getProgramCode());
-  QMap<uint32_t, QString> typesOfProcessing = pGCode->getTypesOfProcessing();
+  QMap<int, QString> typesOfProcessing = pGCode->getTypesOfProcessing();
   for (auto it = typesOfProcessing.constBegin(); it != typesOfProcessing.constEnd(); ++it) {
     ui->lw_typeOfProcessing->addItem(tr("N%1\t%2").arg(QString::number(it.key()), pDictionary->translateTypeOfProcessing(it.value())));
   }
@@ -155,7 +155,7 @@ void MainWindow::displayDataToForm() {
 }
 
 void MainWindow::setRangeForStopAndFindSpinBoxes() {
-  uint32_t countOfFrames = ui->lb_countOfFrames->text().toUInt();
+  int countOfFrames = pGCode->getCountOfFrames();
   if (countOfFrames - 2 >= 28) {
     ui->spB_stopFrame->setRange(20, countOfFrames - 2);
     ui->spB_stopFrame->setValue(20);

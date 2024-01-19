@@ -18,14 +18,14 @@ public:
   explicit GCode(QObject* parent = nullptr);
 
   bool addGCode(QStringList GCodeList);
-  uint32_t getCountOfFrames();
-  uint32_t getHead();
-  QMap<uint32_t, QString> getTypesOfProcessing();
+  int getCountOfFrames();
+  int getHead();
+  QMap<int, QString> getTypesOfProcessing();
   QStringList getTools();
   QStringList getProgramCode();
   void reset();
 
-  void generateOutProgramCode(GCode* gcode, uint32_t stopFrame);
+  void generateOutProgramCode(GCode* gcode, int stopFrame);
   QStringList getOutProgramCode();
 
 signals:
@@ -36,9 +36,9 @@ private:
   constexpr static double BadValue = -100000;
   QStringList m_GCode;
   QStringList m_GCodeOut;
-  uint32_t m_countOfFrames;
-  uint32_t m_countHeadFrames;
-  QMap<uint32_t, QString> m_typesOfProcessing;
+  int m_countOfFrames;
+  int m_countHeadFrames;
+  QMap<int, QString> m_typesOfProcessing;
   QSet<QString> m_tools;
 
   void forEach(std::function<void(QString&)> f);
@@ -47,10 +47,10 @@ private:
   void removeEmptyFrames();
   bool calcCountOfFrames();
   bool calcCountHeadFrames();
-  bool checkFrameNumber(QString& frame, uint32_t frameNumber);
+  bool checkFrameNumber(QString& frame, int frameNumber);
   bool frameIsProcessingName(QString frame);
   QString getTypeOfProcessing(QString frame);
-  uint32_t getFrameNumber(QString frame);
+  int getFrameNumber(QString frame);
   bool frameIsTool(QString frame);
   QString getTool(QString frame);
   std::optional<double> findValue(int startFrame, QChar command);

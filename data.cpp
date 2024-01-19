@@ -3,7 +3,7 @@
 namespace ApplicationVersion {
   const QString versionMajor = "2";
   const QString versionMinor = "3";
-  const QString versionMicro = "0";
+  const QString versionMicro = "1";
 } // namespace ApplicationVersion
 
 namespace GlobalVariables {

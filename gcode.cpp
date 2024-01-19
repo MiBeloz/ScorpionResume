@@ -14,20 +14,20 @@ bool GCode::addGCode(QStringList GCodeList) {
   return (calcCountOfFrames() && checkEndProgram() && calcCountHeadFrames());
 }
 
-uint32_t GCode::getCountOfFrames() {
+int GCode::getCountOfFrames() {
   return m_countOfFrames;
 }
 
-uint32_t GCode::getHead() {
+int GCode::getHead() {
   return m_countHeadFrames;
 }
 
-QMap<uint32_t, QString> GCode::getTypesOfProcessing() {
+QMap<int, QString> GCode::getTypesOfProcessing() {
   if (m_typesOfProcessing.isEmpty()) {
     forEach([&](QString& frame) {
       if (frameIsProcessingName(frame)) {
         QString typeOfProcessing = getTypeOfProcessing(frame);
-        uint32_t frameOfProcessing = getFrameNumber(frame);
+        int frameOfProcessing = getFrameNumber(frame);
         m_typesOfProcessing[frameOfProcessing] = typeOfProcessing;
       }
     });
@@ -59,7 +59,7 @@ void GCode::reset() {
   m_tools.clear();
 }
 
-void GCode::generateOutProgramCode(GCode* gcode, uint32_t stopFrame) {
+void GCode::generateOutProgramCode(GCode* gcode, int stopFrame) {
   m_GCodeOut.clear();
 
   QVector<double> commands;
@@ -98,7 +98,7 @@ void GCode::generateOutProgramCode(GCode* gcode, uint32_t stopFrame) {
   qDebug() << "F = " + QString::number(commands[eCommand::F]);
   qDebug() << "G = " + QString::number(commands[eCommand::G]);
 
-  for (uint32_t i = 0; i < m_countHeadFrames; ++i) {
+  for (int i = 0; i < m_countHeadFrames; ++i) {
     m_GCodeOut.push_back(m_GCode[i]);
   }
 
@@ -174,7 +174,7 @@ void GCode::removeSpacesAndTabsFromBeginning() {
 }
 
 void GCode::removeEmptyFrames() {
-  for (qsizetype i = m_GCode.size() - 1; i > 0; --i) {
+  for (int i = m_GCode.size() - 1; i > 0; --i) {
     if (m_GCode[i].isEmpty()) {
       m_GCode.removeAt(i);
     }
@@ -217,7 +217,7 @@ bool GCode::calcCountHeadFrames() {
   return calcHeadIsOk;
 }
 
-bool GCode::checkFrameNumber(QString& frame, uint32_t frameNumber) {
+bool GCode::checkFrameNumber(QString& frame, int frameNumber) {
   qsizetype n = frame.indexOf('N' + QString::number(frameNumber) + ' ');
   if (n != -1) {
     return true;
@@ -245,11 +245,11 @@ QString GCode::getTypeOfProcessing(QString frame) {
   return frame;
 }
 
-uint32_t GCode::getFrameNumber(QString frame) {
+int GCode::getFrameNumber(QString frame) {
   qsizetype n = frame.indexOf(' ');
   if (n != -1) {
     frame = frame.mid(1, n);
-    return frame.toUInt();
+    return frame.toInt();
   }
   return 0;
 }
@@ -284,7 +284,7 @@ std::optional<double> GCode::findValue(int startFrame, QChar command) {
     if (n != -1) {
       sourceFrame = sourceFrame.mid(n + 1);
 
-      int16_t m = 0;
+      int m = 0;
       if (sourceFrame[m] == '-') {
         ++m;
       }
