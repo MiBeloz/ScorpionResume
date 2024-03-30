@@ -3,14 +3,15 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
-  pDictionary = new Dictionary(this);
-  changeLanguage(Dictionary::Language::russian);
+  pDictionary = Dictionary::init(this);
   pSelectedFile = new SelectedFile(this);
   pGCode = new GCode(this);
   pOutForm = new OutForm(this);
   pAboutWindow = new About(this);
+  pLog = Log::init(this);
   QPixmap pixmap(":/picture.png");
   setWindowIcon(pixmap);
+  changeLanguage(Dictionary::Language::russian);
 
   QObject::connect(ui->le_pathFile, &QLineEdit::textChanged, this,
                    [&] { pSelectedFile->exists(ui->le_pathFile->text()) ? ui->pb_loadFile->setEnabled(true) : ui->pb_loadFile->setEnabled(false); });
@@ -31,14 +32,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   });
   QObject::connect(ui->spB_findFrame, &MySpinBox::sig_inFocus, this, [&]() {
     ui->statusbar->showMessage(tr("%1 %2 %3 %4 %5")
-                                   .arg(pDictionary->translateString("Value"), pDictionary->translateString("from"),
-                                        QString::number(ui->spB_findFrame->minimum()), pDictionary->translateString("to"),
+                                   .arg(pDictionary->translate(Dictionary::Translate::Value), pDictionary->translate(Dictionary::Translate::from),
+                                        QString::number(ui->spB_findFrame->minimum()), pDictionary->translate(Dictionary::Translate::to),
                                         QString::number(ui->spB_findFrame->maximum())));
   });
   QObject::connect(ui->spB_stopFrame, &MySpinBox::sig_inFocus, this, [&]() {
     ui->statusbar->showMessage(tr("%1 %2 %3 %4 %5")
-                                   .arg(pDictionary->translateString("Value"), pDictionary->translateString("from"),
-                                        QString::number(ui->spB_stopFrame->minimum()), pDictionary->translateString("to"),
+                                   .arg(pDictionary->translate(Dictionary::Translate::Value), pDictionary->translate(Dictionary::Translate::from),
+                                        QString::number(ui->spB_stopFrame->minimum()), pDictionary->translate(Dictionary::Translate::to),
                                         QString::number(ui->spB_stopFrame->maximum())));
   });
   QObject::connect(ui->spB_findFrame, &QSpinBox::editingFinished, this, [&]() { ui->statusbar->clearMessage(); });
@@ -52,9 +53,9 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::on_pb_findFile_clicked() {
-  ui->le_pathFile->setText(QFileDialog::getOpenFileName(this, tr("%1").arg(pDictionary->translateString("Open")),
-                                                        tr("%1").arg(GlobalVariables::homeDirOpenFile),
-                                                        tr("%1 %2 (*.%1)").arg(GlobalVariables::defaultFileFormat, pDictionary->translateString("files"))));
+  ui->le_pathFile->setText(QFileDialog::getOpenFileName(this, tr("%1").arg(pDictionary->translate(Dictionary::Translate::Open)),
+                                                        tr("%1").arg(SR::GlobalVariables::homeDirOpenFile),
+                                                        tr("%1 %2 (*.%1)").arg(SR::GlobalVariables::defaultFileFormat, pDictionary->translate(Dictionary::Translate::files))));
 
   if (pSelectedFile->getFileName() != ui->le_pathFile->text()) {
     ui->pb_loadFile->setEnabled(true);
@@ -64,15 +65,15 @@ void MainWindow::on_pb_findFile_clicked() {
 
 void MainWindow::on_pb_loadFile_clicked() {
   clearAll();
-  ui->progressBar->setRange(0, ProgressLoadingFile::progressOperation.size());
-  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::readingFile]) + "...");
+  ui->progressBar->setRange(0, 4);
+  setProgressText(pDictionary->translate(Dictionary::Translate::ReadingFile) + "...");
   emit sig_incrementProgressBar();
 
   pSelectedFile->setFileName(ui->le_pathFile->text());
   QStringList gcode = pSelectedFile->read();
   if (gcode.isEmpty()) {
     setEnabledFileWidgets(true);
-    emit sig_error(Errors::Error::erEmptyFile);
+    emit sig_error(SR::Error::EmptyFile);
   } else {
     if (pGCode->addGCode(gcode)) {
       emit sig_readFile();
@@ -81,10 +82,10 @@ void MainWindow::on_pb_loadFile_clicked() {
 }
 
 void MainWindow::rec_readFile() {
-  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::processingFile]) + "...");
+  setProgressText(pDictionary->translate(Dictionary::Translate::ProcessingFile) + "...");
   emit sig_incrementProgressBar();
 
-  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::searchingTypesOfProcessingAndUsedTools]) + "...");
+  setProgressText(pDictionary->translate(Dictionary::Translate::LookingForTypesOfProcessingAndToolsUsed) + "...");
   ftrTypeOfProcessingReady = QtConcurrent::run([&]() -> bool { return checkTypeOfProcessing(); });
   ftrWtchTypeOfProcessingReady.setFuture(ftrTypeOfProcessingReady);
   ftrSetToolReady = QtConcurrent::run([&]() -> bool { return checkTools(); });
@@ -95,7 +96,7 @@ bool MainWindow::checkTypeOfProcessing() {
   QMap<int, QString> typesOfProcessing = pGCode->getTypesOfProcessing();
   if (typesOfProcessing.isEmpty()) {
     pGCode->reset();
-    emit sig_error(Errors::erNoTypeOfProcessing);
+    emit sig_error(SR::Error::NoTypeOfProcessing);
     return false;
   }
   return true;
@@ -105,12 +106,12 @@ bool MainWindow::checkTools() {
   QStringList tools = pGCode->getTools();
   if (tools.isEmpty()) {
     pGCode->reset();
-    emit sig_error(Errors::erNoTool);
+    emit sig_error(SR::Error::NoTool);
     return false;
   }
   if (tools.size() > 1) {
     pGCode->reset();
-    emit sig_error(Errors::erOneMoreTool);
+    emit sig_error(SR::Error::OneMoreTool);
     return false;
   }
   return true;
@@ -150,7 +151,7 @@ void MainWindow::displayDataToForm() {
   setEnabledWidgets(true);
   setEnabledFileWidgets(true);
 
-  setProgressText(pDictionary->translateString(ProgressLoadingFile::progressOperation[ProgressLoadingFile::finish]) + '!');
+  setProgressText(pDictionary->translate(Dictionary::Translate::Ready) + '!');
   ui->progressBar->setValue(ui->progressBar->maximum());
 }
 
@@ -164,30 +165,33 @@ void MainWindow::setRangeForStopAndFindSpinBoxes() {
     ui->statusbar->clearMessage();
   } else {
     ui->spB_stopFrame->setEnabled(false);
-    emit sig_warning(Errors::Warning::wrnTooFewFrames);
+    emit sig_warning(SR::Warning::TooFewFrames);
   }
 }
 
 void MainWindow::on_pb_generate_clicked() {
-  ui->progressBar->setRange(0, ProgressGenerateFile::progressGenerate.size());
+  ui->progressBar->setRange(0, 3);
   ui->progressBar->reset();
 
-  setProgressText(pDictionary->translateString(ProgressGenerateFile::progressGenerate[ProgressGenerateFile::OperationName::searchXYZFG]) + "...");
+  setProgressText(pDictionary->translate(Dictionary::Translate::LookingForValuesXYZFG) + "...");
   emit sig_incrementProgressBar();
   pGCode->generateOutProgramCode(pGCode, ui->spB_stopFrame->value());
 
-  setProgressText(pDictionary->translateString(ProgressGenerateFile::progressGenerate[ProgressGenerateFile::OperationName::generate]) + "...");
+  setProgressText(pDictionary->translate(Dictionary::Translate::GeneratingTheCP) + "...");
   emit sig_incrementProgressBar();
   pOutForm->lwOutClear();
   QStringList outCode = pGCode->getOutProgramCode();
   if (!outCode.isEmpty()) {
     pOutForm->lwOutAddList(outCode);
+    pOutForm->setFilename(pSelectedFile->getFileName());
     pOutForm->show();
-    pOutForm->setWindowTitle(tr("%1").arg(pDictionary->translateString("Result")));
-    pOutForm->changeLanguage(pDictionary->getLanguage());
+    pOutForm->setWindowTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Result)));
+    pLog->setRecordSourceFilename(pSelectedFile->getFileName());
+    pLog->setRecordPartName(pGCode->getPartName());
+    pLog->setRecordFrame(ui->spB_stopFrame->text());
   }
 
-  setProgressText(pDictionary->translateString(ProgressGenerateFile::progressGenerate[ProgressGenerateFile::OperationName::finish] + '!'));
+  setProgressText(pDictionary->translate(Dictionary::Translate::Ready) + '!');
   ui->progressBar->setValue(ui->progressBar->maximum());
 }
 
@@ -200,15 +204,59 @@ void MainWindow::on_pb_findFrame_clicked() {
 void MainWindow::on_mb_help_about_triggered() {
   pAboutWindow->setModal(true);
   pAboutWindow->show();
-  pAboutWindow->setWindowTitle(tr("%1").arg(pDictionary->translateString("About")));
-  pAboutWindow->changeLanguage(pDictionary->getLanguage());
+  pAboutWindow->setWindowTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::About)));
 }
 
 void MainWindow::on_mb_file_exit_triggered() {
   close();
 }
 
-void MainWindow::rec_showMessageError(Errors::Error er, bool resetAll) {
+void MainWindow::rec_showMessageError(SR::Error er, bool resetAll) {
+  Dictionary::Translate errorTranslate;
+  switch(er){
+  case SR::Error::OpenFile:
+      errorTranslate = Dictionary::Translate::ErrorOpeningFile;
+      break;
+  case SR::Error::EmptyFile:
+      errorTranslate = Dictionary::Translate::ErrorEmptyFile;
+      break;
+  case SR::Error::NoTypeOfProcessing:
+      errorTranslate = Dictionary::Translate::ErrorNoTypeOfProcessing;
+      break;
+  case SR::Error::IncorrectHead:
+      errorTranslate = Dictionary::Translate::ErrorIncorrectHead;
+      break;
+  case SR::Error::OneMoreTool:
+      errorTranslate = Dictionary::Translate::ErrorOneMoreTool;
+      break;
+  case SR::Error::NoTool:
+      errorTranslate = Dictionary::Translate::ErrorNoTool;
+      break;
+  case SR::Error::IncorrectNumeration:
+      errorTranslate = Dictionary::Translate::ErrorIncorrectNumeration;
+      break;
+  case SR::Error::EndProgram:
+      errorTranslate = Dictionary::Translate::ErrorEndProgram;
+      break;
+  case SR::Error::FindX:
+      errorTranslate = Dictionary::Translate::ErrorFindX;
+      break;
+  case SR::Error::FindY:
+      errorTranslate = Dictionary::Translate::ErrorFindY;
+      break;
+  case SR::Error::FindZ:
+      errorTranslate = Dictionary::Translate::ErrorFindZ;
+      break;
+  case SR::Error::FindF:
+      errorTranslate = Dictionary::Translate::ErrorFindF;
+      break;
+  case SR::Error::FindG:
+      errorTranslate = Dictionary::Translate::ErrorFindG;
+      break;
+  default:
+      errorTranslate = Dictionary::Translate::ErrorUnknown;
+  }
+
   if (resetAll) {
     clearAll();
     setEnabledFileWidgets(true);
@@ -218,44 +266,55 @@ void MainWindow::rec_showMessageError(Errors::Error er, bool resetAll) {
   pOutForm->close();
   pOutForm->lwOutClear();
   QMessageBox mBox;
-  mBox.setWindowTitle(tr("%1!").arg(pDictionary->translateString(Errors::errorMsg)));
+  mBox.setWindowTitle(tr("%1!").arg(pDictionary->translate(Dictionary::Translate::Error)));
   mBox.setIcon(QMessageBox::Icon::Critical);
-  mBox.setText(tr("%1").arg(pDictionary->translateString(Errors::errorDescription[er])));
+  mBox.setText(tr("%1").arg(pDictionary->translate(errorTranslate)));
   mBox.addButton(QMessageBox::Button::Ok);
   mBox.exec();
 }
 
-void MainWindow::rec_showMessageWarning(Errors::Warning wrn) {
+void MainWindow::rec_showMessageWarning(SR::Warning wrn) {
+  Dictionary::Translate warningTranslate;
+  switch(wrn){
+  case SR::Warning::TooFewFrames:
+      warningTranslate = Dictionary::Translate::WarningTooFewFrames;
+      break;
+  default:
+      warningTranslate = Dictionary::Translate::ErrorUnknown;
+  }
+
   QMessageBox mBox;
-  mBox.setWindowTitle(tr("%1!").arg(pDictionary->translateString(Errors::warningMsg)));
-  mBox.setIcon(QMessageBox::Icon::Warning);
-  mBox.setText(tr("%1").arg(pDictionary->translateString(Errors::warningDescription[wrn])));
+  mBox.setWindowTitle(tr("%1!").arg(pDictionary->translate(Dictionary::Translate::Warning)));
+  mBox.setIcon(QMessageBox::Icon::Warning);  
+  mBox.setText(tr("%1").arg(pDictionary->translate(warningTranslate)));
   mBox.addButton(QMessageBox::Button::Ok);
   mBox.exec();
 }
 
 void MainWindow::changeLanguage(Dictionary::Language language) {
   pDictionary->setLanguage(language);
-  ui->mb_file->setTitle(tr("%1").arg(pDictionary->translateString("File")));
-  ui->mb_file_exit->setText(tr("%1").arg(pDictionary->translateString("Exit")));
-  ui->mb_help->setTitle(tr("%1").arg(pDictionary->translateString("Help")));
-  ui->mb_help_about->setText(tr("%1").arg(pDictionary->translateString("About")));
-  ui->grB_program->setTitle(tr("%1").arg(pDictionary->translateString("Program")));
-  ui->lb_progPath->setText(tr("%1:").arg(pDictionary->translateString("Path to the program")));
-  ui->pb_loadFile->setText(tr("%1").arg(pDictionary->translateString("Load")));
-  ui->pb_findFile->setText(tr("%1").arg(pDictionary->translateString("Find")));
-  ui->grB_info->setTitle(tr("%1").arg(pDictionary->translateString("Information")));
-  ui->grB_typeOfProcessing->setTitle(tr("%1").arg(pDictionary->translateString("Types of processing")));
-  ui->lb_toolName->setText(tr("%1:").arg(pDictionary->translateString("Tool")));
-  ui->lb_countOfFramesName->setText(tr("%1:").arg(pDictionary->translateString("Count of frames")));
-  ui->grB_findFrame->setTitle(tr("%1").arg(pDictionary->translateString("Frame search")));
-  ui->pb_findFrame->setText(tr("%1").arg(pDictionary->translateString("Find")));
-  ui->grB_settings->setTitle(tr("%1").arg(pDictionary->translateString("Settings")));
-  ui->lb_stopFrame->setText(tr("%1:").arg(pDictionary->translateString("Stop frame")));
-  ui->pb_generate->setText(tr("%1").arg(pDictionary->translateString("Generate")));
-  ui->pb_clearAll->setText(tr("%1").arg(pDictionary->translateString("Clear all")));
-  ui->grB_viewProgram->setTitle(tr("%1").arg(pDictionary->translateString("View program")));
-  ui->grB_progress->setTitle(tr("%1").arg(pDictionary->translateString("Progress")));
+  ui->mb_file->setTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::File)));
+  ui->mb_file_exit->setText(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Exit)));
+  ui->mb_help->setTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Help)));
+  ui->mb_help_about->setText(tr("%1").arg(pDictionary->translate(Dictionary::Translate::About)));
+  ui->grB_program->setTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Program)));
+  ui->lb_progPath->setText(tr("%1:").arg(pDictionary->translate(Dictionary::Translate::PathToTheProgram)));
+  ui->pb_loadFile->setText(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Load)));
+  ui->pb_findFile->setText(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Find)));
+  ui->grB_info->setTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Information)));
+  ui->grB_typeOfProcessing->setTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::TypesOfProcessing)));
+  ui->lb_toolName->setText(tr("%1:").arg(pDictionary->translate(Dictionary::Translate::Tool)));
+  ui->lb_countOfFramesName->setText(tr("%1:").arg(pDictionary->translate(Dictionary::Translate::CountOfFrames)));
+  ui->grB_findFrame->setTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::FrameSearch)));
+  ui->pb_findFrame->setText(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Find)));
+  ui->grB_settings->setTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Settings)));
+  ui->lb_stopFrame->setText(tr("%1:").arg(pDictionary->translate(Dictionary::Translate::StopFrame)));
+  ui->pb_generate->setText(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Generate)));
+  ui->pb_clearAll->setText(tr("%1").arg(pDictionary->translate(Dictionary::Translate::ClearAll)));
+  ui->grB_viewProgram->setTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::ViewProgram)));
+  ui->grB_progress->setTitle(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Progress)));
+  pAboutWindow->changeLanguage();
+  pOutForm->changeLanguage();
 }
 
 void MainWindow::setProgressText(QString text) {
@@ -283,6 +342,7 @@ void MainWindow::setEnabledFileWidgets(bool enabled) {
 
 void MainWindow::clearAll() {
   pGCode->reset();
+  pLog->clearRecord();
   ui->lw_file->clear();
   ui->lw_typeOfProcessing->clear();
   ui->lb_tool->setText(tr("%1").arg("-"));

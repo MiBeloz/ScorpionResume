@@ -17,11 +17,11 @@ bool SelectedFile::exists(const QString &fileName) const {
 QStringList SelectedFile::read() {
   m_ListFile.clear();
   if (!m_file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    emit sig_readError(Errors::erOpen);
+    emit sig_readError(SR::Error::OpenFile);
   }
 
   while (!m_file.atEnd()) {
-    if (GlobalVariables::isUTF8Encoding) { // Если текст в локальной 8-бит кодировке (windows-1251);
+    if (SR::GlobalVariables::isUTF8Encoding) { // Если текст в локальной 8-бит кодировке (windows-1251);
       m_ListFile.append(QString::fromUtf8(m_file.readLine()));
     } else { // Если текст в UTF-8
       m_ListFile.append(QString::fromLocal8Bit(m_file.readLine()));

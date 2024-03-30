@@ -20,6 +20,7 @@ public:
   bool addGCode(QStringList GCodeList);
   int getCountOfFrames();
   int getHead();
+  QString getPartName();
   QMap<int, QString> getTypesOfProcessing();
   QStringList getTools();
   QStringList getProgramCode();
@@ -29,7 +30,7 @@ public:
   QStringList getOutProgramCode();
 
 signals:
-  void sig_error(Errors::Error, bool resetAll = true);
+  void sig_error(SR::Error, bool resetAll = true);
 
 private:
   enum eCommand { X, Y, Z, F, G };

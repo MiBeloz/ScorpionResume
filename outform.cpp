@@ -3,7 +3,8 @@
 
 OutForm::OutForm(QWidget *parent) : QDialog(parent), ui(new Ui::OutForm) {
   ui->setupUi(this);
-  pDictionary = new Dictionary(this);
+  pDictionary = Dictionary::init();
+  pLog = Log::init();
 }
 
 OutForm::~OutForm() {
@@ -12,20 +13,24 @@ OutForm::~OutForm() {
 
 void OutForm::lwOutClear() {
   ui->lw_out->clear();
+  mFilename.clear();
 }
 
 void OutForm::lwOutAddList(QStringList strList) {
-  ui->lw_out->addItems(strList);
+    ui->lw_out->addItems(strList);
+}
+
+void OutForm::setFilename(QString filename) {
+  mFilename = filename;
 }
 
 int OutForm::getLwOutCount() {
   return ui->lw_out->count();
 }
 
-void OutForm::changeLanguage(Dictionary::Language language) {
-  pDictionary->setLanguage(language);
-  ui->pb_save->setText(tr("%1").arg(pDictionary->translateString("Save")));
-  ui->pb_close->setText(tr("%1").arg(pDictionary->translateString("Close")));
+void OutForm::changeLanguage() {
+  ui->pb_save->setText(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Save)));
+  ui->pb_close->setText(tr("%1").arg(pDictionary->translate(Dictionary::Translate::Close)));
 }
 
 void OutForm::on_pb_close_clicked() {
@@ -33,8 +38,10 @@ void OutForm::on_pb_close_clicked() {
 }
 
 void OutForm::on_pb_save_clicked() {
-  QString path = QFileDialog::getSaveFileName(this, tr("%1").arg(pDictionary->translateString("Save")), tr("%1").arg(GlobalVariables::homeDirOpenFile),
-                                              tr("%1 %2 (*.%1)").arg(GlobalVariables::defaultFileFormat, pDictionary->translateString("files")));
+  QString path = QFileDialog::getSaveFileName(this,
+                                              tr("%1").arg(pDictionary->translate(Dictionary::Translate::Save)),
+                                              tr("%1").arg(mFilename),
+                                              tr("%1 %2 (*.%1)").arg(SR::GlobalVariables::defaultFileFormat, pDictionary->translate(Dictionary::Translate::files)));
 
   QFile out(path);
   if (!out.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -45,4 +52,6 @@ void OutForm::on_pb_save_clicked() {
     stream << ui->lw_out->item(i)->text() << Qt::endl;
   }
   out.close();
+
+  pLog->write();
 }

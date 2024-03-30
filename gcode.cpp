@@ -1,6 +1,6 @@
 #include "gcode.h"
 
-GCode::GCode(QObject* parent) : QObject{parent} {}
+GCode::GCode(QObject* parent) : QObject(parent) {}
 
 bool GCode::addGCode(QStringList GCodeList) {
   reset();
@@ -20,6 +20,26 @@ int GCode::getCountOfFrames() {
 
 int GCode::getHead() {
   return m_countHeadFrames;
+}
+
+QString GCode::getPartName() {
+  static const std::regex regexPartName(R"(N[0-9]\s?\;\s?Part\sname\s\-)");
+  QString result;
+  for (const auto& line : m_GCode) {
+    if (std::regex_search(line.toStdString(), regexPartName)) {
+      result = line;
+      break;
+    }
+  }
+
+  if (qsizetype n = result.indexOf("Part name -"); n != -1) {
+    result = result.mid(n + 11);
+  }
+  if (qsizetype n = result.lastIndexOf('-'); n != -1) {
+    result = result.mid(0, n);
+  }
+
+  return result;
 }
 
 QMap<int, QString> GCode::getTypesOfProcessing() {
@@ -71,23 +91,23 @@ void GCode::generateOutProgramCode(GCode* gcode, int stopFrame) {
   commands[eCommand::G] = findValue(stopFrame, 'G').value_or(BadValue);
 
   if (commands[eCommand::X] == BadValue) {
-    emit sig_error(Errors::erFindX, false);
+    emit sig_error(SR::FindX, false);
     return;
   }
   if (commands[eCommand::Y] == BadValue) {
-    emit sig_error(Errors::erFindY, false);
+    emit sig_error(SR::FindY, false);
     return;
   }
   if (commands[eCommand::Z] == BadValue) {
-    emit sig_error(Errors::erFindZ, false);
+    emit sig_error(SR::FindZ, false);
     return;
   }
   if (commands[eCommand::F] == BadValue) {
-    emit sig_error(Errors::erFindF, false);
+    emit sig_error(SR::FindF, false);
     return;
   }
   if (commands[eCommand::G] == BadValue) {
-    emit sig_error(Errors::erFindG, false);
+    emit sig_error(SR::FindG, false);
     return;
   }
 
@@ -111,7 +131,7 @@ void GCode::generateOutProgramCode(GCode* gcode, int stopFrame) {
       }
       str += ")";
       m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + str + ' ');
-      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " ;(Processing - " + it.value() + ") ");
+      m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + " ;(PROCESSING - " + it.value() + ") ");
       m_GCodeOut.push_back('N' + QString::number(m_GCodeOut.size()) + ' ' + str + ' ');
 
       break;
@@ -189,7 +209,7 @@ bool GCode::calcCountOfFrames() {
       if (!checkFrameNumber(frame, m_countOfFrames)) {
         reset();
         calcOfFramesIsOk = false;
-        emit sig_error(Errors::Error::erIncorrectNumeration);
+        emit sig_error(SR::Error::IncorrectNumeration);
         return;
       }
     }
@@ -207,7 +227,7 @@ bool GCode::calcCountHeadFrames() {
           m_countHeadFrames = getFrameNumber(m_GCode[i]);
           if (m_countHeadFrames != 12) {
             calcHeadIsOk = false;
-            emit sig_error(Errors::Error::erIncorrectHead);
+            emit sig_error(SR::Error::IncorrectHead);
           }
           break;
         }
@@ -326,6 +346,6 @@ bool GCode::checkEndProgram() {
   if (std::regex_match(m_GCode[m_GCode.size() - 1].toStdString(), regexEndProgram)) {
     return true;
   }
-  emit sig_error(Errors::Error::erEndProgram);
+  emit sig_error(SR::Error::EndProgram);
   return false;
 }

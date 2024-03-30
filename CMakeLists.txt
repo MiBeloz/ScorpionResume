@@ -40,6 +40,8 @@ set(PROJECT_SOURCES
     resources.rc
     myspinbox.cpp
     myspinbox.h
+    log.cpp
+    log.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

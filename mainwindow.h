@@ -17,6 +17,7 @@
 #include "myspinbox.h"
 #include "outform.h"
 #include "selectedfile.h"
+#include "log.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -28,12 +29,12 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
 public:
-  explicit MainWindow(QWidget *parent = nullptr);
+  explicit MainWindow(QWidget* parent = nullptr);
   ~MainWindow();
 
 signals:
-  void sig_error(Errors::Error, bool resetAll = true);
-  void sig_warning(Errors::Warning wrn);
+  void sig_error(SR::Error, bool resetAll = true);
+  void sig_warning(SR::Warning wrn);
   void sig_readFile();
   void sig_incrementProgressBar();
   void sig_processingReady();
@@ -51,16 +52,17 @@ private slots:
   void on_pb_findFrame_clicked();
   void on_mb_help_about_triggered();
   void on_mb_file_exit_triggered();
-  void rec_showMessageError(Errors::Error er, bool resetAll = true);
-  void rec_showMessageWarning(Errors::Warning wrn);
+  void rec_showMessageError(SR::Error er, bool resetAll = true);
+  void rec_showMessageWarning(SR::Warning wrn);
 
 private:
-  Ui::MainWindow *ui;
-  Dictionary *pDictionary;
-  SelectedFile *pSelectedFile;
-  GCode *pGCode;
-  OutForm *pOutForm;
-  About *pAboutWindow;
+  Ui::MainWindow* ui;
+  Dictionary* pDictionary;
+  SelectedFile* pSelectedFile;
+  GCode* pGCode;
+  OutForm* pOutForm;
+  About* pAboutWindow;
+  Log* pLog;
 
   QFuture<bool> ftrTypeOfProcessingReady;
   QFuture<bool> ftrSetToolReady;

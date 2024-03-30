@@ -10,16 +10,16 @@ class SelectedFile : public QObject {
   Q_OBJECT
 
 public:
-  explicit SelectedFile(QObject *parent = nullptr);
+  explicit SelectedFile(QObject* parent = nullptr);
 
   QString getFileName() const;
   void setFileName(QString fileName);
-  bool exists(const QString &fileName) const;
+  bool exists(const QString& fileName) const;
   QStringList read();
   void clear();
 
 signals:
-  void sig_readError(Errors::Error, bool resetAll = true);
+  void sig_readError(SR::Error, bool resetAll = true);
 
 private:
   QFile m_file;
